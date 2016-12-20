@@ -22,11 +22,13 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DatumBuilder {
     private static final List<Schema.Type> PRIMITIVES;
     private static TimeZone defaultTimeZone = TimeZone.getTimeZone("UTC-0");
-    private static final String pattern = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*Z?$";
+    private static final String pattern = "^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*)Z?$";
 
 
     static {
@@ -83,6 +85,17 @@ public class DatumBuilder {
 
     public static void setDefaultTimeZone(TimeZone timeZone) {
         defaultTimeZone = timeZone;
+    }
+
+    private static long parseDateTimeLocal(String text) {
+        text = text.trim();
+        Calendar c = null;
+        if (!text.matches(pattern)) {
+            text = text.substring(0, 19);
+        }
+        c = DatatypeConverter.parseDateTime(text);
+        c.setTimeZone(defaultTimeZone);
+        return c.getTimeInMillis();
     }
 
     private static long parseDateTime(String text) {
@@ -223,7 +236,7 @@ public class DatumBuilder {
             return Integer.parseInt(text);
 
         if (type == Schema.Type.LONG)
-            return text.contains("T") ? parseDateTime(text) : Long.parseLong(text);
+            return text.contains("T") ? parseDateTimeLocal(text) : Long.parseLong(text);
 
         if (type == Schema.Type.FLOAT)
             return Float.parseFloat(text);
@@ -256,7 +269,6 @@ public class DatumBuilder {
         } else {
             NodeList nodes = rootRecord ? el.getOwnerDocument().getChildNodes() : el.getChildNodes();
             for (int i = 0; i < nodes.getLength(); i++) {
-                Node node = nodes.item(i);
                 setFieldFromNode(schema, record, nodes.item(i));
             }
         }
@@ -321,6 +333,8 @@ public class DatumBuilder {
         Element child = (Element) node;
         boolean setRecordFromNode = false;
         final String fieldName = child.getLocalName();
+        if (fieldName.toLowerCase().contains("operatorbypass"))
+                System.out.println("test");
         Schema.Field field = getFieldBySource(schema, new Source(fieldName, false));
         if (field == null) {
             field = getNestedFieldBySource(schema, new Source(fieldName, false));
@@ -376,7 +390,6 @@ public class DatumBuilder {
         if (schema.getType() != Schema.Type.RECORD) {
             return null;
         }
-
         for (Schema.Field field : schema.getFields()) {
             Schema topSchema = field.schema();
             switch (topSchema.getType()) {
@@ -386,7 +399,8 @@ public class DatumBuilder {
                         try {
                             tempSource = field.getProp("source");
                         } catch (Exception e) {
-
+                            System.err.print("WARNING: ");
+                            e.printStackTrace(System.err);
                         }
                         if (tempSource == null || tempSource.equals("None")) {
                             Schema.Field fieldBySource = getFieldBySource(topSchema.getElementType(), source);
