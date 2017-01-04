@@ -20,7 +20,10 @@ class Converter(val config: Config) {
 
   for (mode <- config.modes) {
     mode match {
-      case ConvertMode.XSD => convertXSD()
+      case ConvertMode.XSD =>
+        xsdIn = (config.xsdFile toFile) bufferedInput()
+        avscOut = (config.avscFile toFile) bufferedOutput()
+        convertXSD()
       case ConvertMode.XML =>
         if (config.stdout) {
           xmlIn = new BufferedInputStream(System.in)
