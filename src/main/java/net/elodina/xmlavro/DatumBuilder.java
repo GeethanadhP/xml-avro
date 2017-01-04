@@ -37,7 +37,7 @@ public class DatumBuilder {
     }
 
     private Schema schema;
-    private boolean caseSensitiveNames = true;
+    private boolean caseSensitiveNames = false; //TODO make it true again
     private String split;
     private boolean skipMissingElements, skipMissingAttributes;
     private File validationSchema;
@@ -230,7 +230,7 @@ public class DatumBuilder {
 
     private Object createValue(Schema.Type type, String text) {
         if (type == Schema.Type.BOOLEAN)
-            return "true".equals(text) || "1".equals(text);
+            return "true".equals(text.toLowerCase()) || "1".equals(text);
 
         if (type == Schema.Type.INT)
             return Integer.parseInt(text);
@@ -333,8 +333,6 @@ public class DatumBuilder {
         Element child = (Element) node;
         boolean setRecordFromNode = false;
         final String fieldName = child.getLocalName();
-        if (fieldName.toLowerCase().contains("operatorbypass"))
-                System.out.println("test");
         Schema.Field field = getFieldBySource(schema, new Source(fieldName, false));
         if (field == null) {
             field = getNestedFieldBySource(schema, new Source(fieldName, false));
