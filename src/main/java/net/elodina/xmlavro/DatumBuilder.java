@@ -277,7 +277,7 @@ public class DatumBuilder {
             NamedNodeMap attrMap = el.getAttributes();
             for (int i = 0; i < attrMap.getLength(); i++) {
                 Attr attr = (Attr) attrMap.item(i);
-
+                // TODO revert to getName and handle namespace
                 List<String> ignoredNamespaces = Arrays.asList("http://www.w3.org/2000/xmlns/",
                         "http://www.w3.org/2001/XMLSchema-instance");
                 if (ignoredNamespaces.contains(attr.getNamespaceURI()))
@@ -288,7 +288,7 @@ public class DatumBuilder {
                     continue;
 
                 if (!setRecordFieldFromNode) {
-                    Schema.Field field = getFieldBySource(schema, new Source(attr.getName(), true));
+                    Schema.Field field = getFieldBySource(schema, new Source(attr.getLocalName(), true));
                     if (field == null) {
                         // Handle wildcard attributes
                         Schema.Field anyField = schema.getField(Source.WILDCARD);
