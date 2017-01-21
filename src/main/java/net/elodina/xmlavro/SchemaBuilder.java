@@ -223,7 +223,7 @@ public class SchemaBuilder {
         Schema record = Schema.createRecord(name, null, null, false);
         schemas.put(name, record);
 
-        Map<String, Schema.Field> fields = new HashMap<>();
+        Map<String, Schema.Field> fields = new LinkedHashMap<>();
         createGroupFields(groupTerm, fields, false);
         record.setFields(new ArrayList<>(fields.values()));
 

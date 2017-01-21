@@ -8,6 +8,7 @@ import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.specific.SpecificDatumWriter
 
+import scala.collection.JavaConverters._
 import scala.reflect.io.Path
 
 /**
@@ -80,7 +81,6 @@ class Converter(val config: Config) {
     val fileWriter = new DataFileWriter[AnyRef](datumWriter)
     fileWriter.setCodec(CodecFactory.snappyCodec)
     fileWriter.create(schema, avroOut)
-    import scala.collection.JavaConverters._
     for (datum <- datums.asScala) fileWriter.append(datum)
     fileWriter flush()
     fileWriter close()

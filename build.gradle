@@ -22,11 +22,13 @@ repositories {
 dependencies {
     compile 'org.scala-lang:scala-library:2.12.1'
     compile 'org.scala-lang:scala-reflect:2.12.1'
+    compile 'org.scala-lang.modules:scala-xml_2.12:1.0.6'
+
 //    compile 'net.jcazevedo:moultingyaml_2.12:0.4.0'
     compile 'org.slf4j:slf4j-api:1.7.5'
     compile 'org.apache.avro:avro:1.7.5'
     compile 'org.skyscreamer:jsonassert:1.2.3'
-    compile 'xerces:xercesImpl:2.11.0'
+    compile 'xerces:xercesImpl:2.11.0.SP5'
     testCompile 'junit:junit:4.8.1'
 }
 

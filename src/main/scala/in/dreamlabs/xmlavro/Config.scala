@@ -40,8 +40,8 @@ class CommandLineConfig(args: Array[String]) extends Config {
       case "-b" | "--baseDir" =>
         baseDir = Path(fetchArg("Base directory location"))
       case "-c" | "--config" =>
-        configFile = Path(fetchArg("Config file location"));
-        isAdvanced = true;
+        configFile = Path(fetchArg("Config file location"))
+        isAdvanced = true
         processConfigFile()
       case "-s" | "--stdout" | "--stream" => stdout = true
       case "-xsd" | "--toAvsc" => fetchXSDParams
