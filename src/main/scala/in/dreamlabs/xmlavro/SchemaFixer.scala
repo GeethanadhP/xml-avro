@@ -31,6 +31,7 @@ import scala.reflect.io.Path
   */
 class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
   var debug = false
+  var rebuildChoice = false
   private var typeCount = -1
   private var typeLevel = 0
   private val schemas = mutable.Map[String, Schema]()
@@ -104,15 +105,35 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
 
   private def processGroup(
       term: XSTerm,
-      innerOptional: Boolean = false): mutable.Map[String, Field] = {
-    if (term.getType != MODEL_GROUP)
-      throw XSDException(s"Unknown Term type: ${term.getType}")
-
+      innerOptional: Boolean = false,
+      array: Boolean = false): mutable.Map[String, Field] = {
+    val fields = mutable.LinkedHashMap[String, Field]()
     val group = term.asInstanceOf[XSModelGroup]
     group.getCompositor match {
-      case XSModelGroup.COMPOSITOR_CHOICE => processChoice(group)
+      case XSModelGroup.COMPOSITOR_CHOICE =>
+        if (rebuildChoice)
+          fields ++= processChoice(group)
+        else if (!array)
+          fields ++= processChoice(group)
+        else {
+          val name = generateTypeName
+          val groupRecord = createRecord(generateTypeName, group)
+          fields += (name -> new Field(name,
+                                       Schema.createArray(groupRecord),
+                                       null,
+                                       null))
+        }
       case XSModelGroup.COMPOSITOR_SEQUENCE =>
-        processSequence(group, innerOptional)
+        if (!array)
+          fields ++= processSequence(group, innerOptional)
+        else {
+          val name = generateTypeName
+          val groupRecord = createRecord(generateTypeName, group)
+          fields += (name -> new Field(name,
+                                       Schema.createArray(groupRecord),
+                                       null,
+                                       null))
+        }
     }
   }
 
@@ -122,7 +143,7 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
     val fields = mutable.LinkedHashMap[String, Field]()
     for (particle <- group.getParticles.asScala.map(
            _.asInstanceOf[XSParticle])) {
-      val optional = particle.getMinOccurs == 0
+      val optional = innerOptional || particle.getMinOccurs == 0
       val array = particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
       val innerTerm = particle.getTerm
       innerTerm.getType match {
@@ -130,16 +151,7 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
           val field = createField(innerTerm, optional, array)
           fields += (field.getProp(Source.SOURCE) -> field)
         case MODEL_GROUP =>
-          if (!array)
-            fields ++= processGroup(innerTerm, innerOptional)
-          else {
-            val name = generateTypeName
-            val groupRecord = createRecord(generateTypeName, innerTerm)
-            fields += (name -> new Field(name,
-                                         Schema.createArray(groupRecord),
-                                         null,
-                                         null))
-          }
+          fields ++= processGroup(innerTerm, innerOptional, array)
         case _ => throw XSDException(s"Unsupported term type ${group.getType}")
       }
     }
@@ -148,7 +160,6 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
 
   private def processChoice(group: XSModelGroup): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
-    val groupArray = group
     for (particle <- group.getParticles.asScala.map(
            _.asInstanceOf[XSParticle])) {
       val array = particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
@@ -157,17 +168,7 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
         case ELEMENT_DECLARATION | WILDCARD =>
           val field = createField(innerTerm, optional = true, array)
           fields += (field.getProp(Source.SOURCE) -> field)
-        case MODEL_GROUP =>
-          if (!array)
-            fields ++= processGroup(innerTerm, innerOptional = true)
-          else {
-            val name = generateTypeName
-            val groupRecord = createRecord(generateTypeName, innerTerm)
-            fields += (name -> new Field(name,
-                                         Schema.createArray(groupRecord),
-                                         null,
-                                         null))
-          }
+        case MODEL_GROUP => fields ++= processGroup(innerTerm, true, array)
         case _ => throw XSDException(s"Unsupported term type ${group.getType}")
       }
     }
@@ -207,9 +208,7 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
       val fieldSchema =
         processType(extnType.getBaseType, optional = true, array = false)
       val field = new Field(name.get, fieldSchema, null, null)
-      field.addProp(
-        Source.SOURCE,
-        Source(SchemaFixer.TEXT_VALUE).toString())
+      field.addProp(Source.SOURCE, Source(SchemaFixer.TEXT_VALUE).toString())
       fields += (field.getProp(Source.SOURCE) -> field)
     }
     fields
@@ -226,10 +225,8 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
 
   private def createFields(typeDef: XSObject): List[Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
-    //    if(typeDef.isInstanceOf[XSTypeDefinition]){}
     typeDef match {
       case complexType: XSComplexTypeDefinition =>
-        //        val complexType = typeDef.asInstanceOf[XSComplexTypeDefinition]
         fields ++= processAttributes(complexType)
         fields ++= processExtension(complexType)
         fields ++= processParticle(complexType)
@@ -256,7 +253,6 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
         //TODO Generate Unique Name
 
         val field: Field = new Field(name.get, fieldSchema, null, null)
-        //        val attribute: Boolean = source.getType == ATTRIBUTE_DECLARATION
         field.addProp(Source.SOURCE,
                       Source(source.getName, attribute).toString())
 
@@ -387,10 +383,13 @@ object SchemaFixer {
   val TEXT_VALUE = "text_value"
 
   def main(args: Array[String]): Unit = {
-    //    new SchemaFixer(
-    //      Path("C:/Users/p3008264/git/xml-avro/src/test/resources/books.xsd"),
-    //      Path("C:/Users/p3008264/git/xml-avro/xml-avro/src/test/resources"))
-    val schema = new SchemaFixer(
+    var schema: SchemaFixer = null
+    schema = new SchemaFixer(
+      Path("C:/Users/p3008264/git/xml-avro/src/test/resources/books.xsd"),
+      Option(
+        Path("C:/Users/p3008264/git/xml-avro/xml-avro/src/test/resources")))
+    println(schema.schema)
+    schema = new SchemaFixer(
       Path("C:/Users/p3008264/git/xml-avro/xsd/sales/MnSEnvelope.xsd"),
       Option(Path("C:/Users/p3008264/git/xml-avro/xsd/sales")))
     println(schema.schema)
