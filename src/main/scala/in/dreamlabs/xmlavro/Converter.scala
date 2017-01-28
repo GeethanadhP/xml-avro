@@ -2,6 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.io._
 import java.util
+import java.util.Calendar
 
 import net.elodina.xmlavro.{DatumBuilder, SchemaBuilder}
 import org.apache.avro.Schema
@@ -68,11 +69,16 @@ class Converter(val config: Config) {
                          skipMissing: Boolean,
                          validationSchema: Path) {
     val schema = new Schema.Parser().parse(avscFile.jfile)
+    val startTime = Calendar.getInstance().getTimeInMillis
     val datumBuilder =
       new DatumBuilder(schema, split, skipMissing, if (validationSchema != null) validationSchema.jfile else null)
-    val datums: util.ArrayList[AnyRef] = datumBuilder.createDatum(xmlIn)
+//    val datums: util.ArrayList[AnyRef] = datumBuilder.createDatum(xmlIn)
+//        val datums: util.List[Any]= new DatumFixer(schema,xmlIn,Option(split),true).datums.asJava
+    new AvroBuilder(schema,split,true).createDatums(xmlIn)
+//    val endTime = Calendar.getInstance().getTimeInMillis
+//    println(endTime - startTime)
     xmlIn close()
-    writeAvro(schema, datums)
+    //    writeAvro(schema, datums)
   }
 
   @throws[IOException]

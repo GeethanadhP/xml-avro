@@ -1,0 +1,55 @@
+{
+  "book": [
+    {
+      "id": "b001",
+      "others": {
+        "sold": "10",
+        "ot:random": "true",
+        "content": "The best book i ever read"
+      },
+      "author": "Brandon Sanderson",
+      "title": "Unbeliveable twitst",
+      "genre": "Fantasy",
+      "price": [
+        {
+          "currency": null,
+          "text_value": 50.0
+        }
+      ],
+      "pub_date": 1166347847000,
+      "type0": []
+    },
+    {
+      "id": "b002",
+      "others": {
+        "content": "a good one i would say",
+        "url": "www.danbrown.com"
+      },
+      "author": "Dan Brown",
+      "title": "Angleso and Demenso",
+      "genre": "Mystery Thriller",
+      "price": [
+        {
+          "currency": "EUR",
+          "text_value": 52.0
+        }
+      ],
+      "pub_date": 1040117447000,
+      "type0": []
+    },
+    {
+      "id": "b003",
+      "others": {
+        "sold": "23",
+        "language": "French",
+        "url": "www.danbrown.com"
+      },
+      "author": "Dan Brown",
+      "title": "Encryto",
+      "genre": "Mystery Thriller",
+      "price": [],
+      "pub_date": 1071653447000,
+      "type0": []
+    }
+  ]
+}

@@ -22,8 +22,6 @@ import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import java.io.*;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class DatumBuilder {
     private static final List<Schema.Type> PRIMITIVES;
@@ -202,7 +200,7 @@ public class DatumBuilder {
     @SuppressWarnings("unchecked")
     private Object createArray(Schema schema, Element el) {
         NodeList childNodes = el.getChildNodes();
-        Schema elementType = schema.getElementType();
+        Schema childType = schema.getElementType();
         int numElements = childNodes.getLength();
         @SuppressWarnings("rawtypes")
         GenericData.Array array = new GenericData.Array(numElements, schema);
@@ -213,7 +211,7 @@ public class DatumBuilder {
                 continue;
             Element child = (Element) childNodes.item(i);
             // noinspection unchecked
-            array.add(createNodeDatum(elementType, child, true));
+            array.add(createNodeDatum(childType, child, true));
         }
         return array;
     }
