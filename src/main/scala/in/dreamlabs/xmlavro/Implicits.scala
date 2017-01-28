@@ -1,9 +1,12 @@
 package in.dreamlabs.xmlavro
 
+import java.util
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 
 import in.dreamlabs.xmlavro.XMLEvents._
+import org.apache.avro.Schema.Type._
+import org.apache.avro.generic.GenericData.Record
 
 import scala.collection.mutable
 
@@ -53,6 +56,8 @@ trait Implicits {
       attrMap
     }
 
+    def path: List[AvroPath] = XMLEvents.schemaPath.toList
+
     def hasAttributes: Boolean = attributes nonEmpty
 
     def ns: Option[String] =
@@ -73,10 +78,10 @@ trait Implicits {
       }
 
     def push(): Unit =
-      if (ns isDefined) eleStack = s"${ns get}:$name" :: eleStack
-      else eleStack = name :: eleStack
+      if (ns isDefined) addElement(s"${ns get}:$name") //eleStack = s"${ns get}:$name" :: eleStack
+      else addElement(name) //eleStack = name :: eleStack
 
-    def pop(): Unit = eleStack = eleStack.tail
+    def pop(): Unit = removeElement(name) //eleStack = eleStack.tail
 
     def element: String = eleStack.head
 
@@ -85,14 +90,53 @@ trait Implicits {
     def hasText: Boolean = event.asCharacters().getData.trim != ""
   }
 
-}
+  implicit class RichRecord(record: Record) {
+    def at(path: List[AvroPath]): Record = {
+      var resultRecord = record
+      path.foreach {
+        path =>
+          if (path.pathType == ARRAY) {
+            val array = resultRecord.get(path name).asInstanceOf[util.List[AnyRef]]
+            if (array.size() - 1 < path.index) {
+              val arraySchema = AvroUtils.getSchema(resultRecord.getSchema.getField(path name)).getElementType
+              val arrayRecord = AvroUtils.createRecord(arraySchema)
+              array.add(arrayRecord)
+              resultRecord = arrayRecord
+            } else
+              resultRecord = array.get(path index).asInstanceOf[Record]
+          } else
+            resultRecord.get(path name)
+      }
+      resultRecord
+    }
 
-object XMLEvents {
-  var eleStack: List[String] = List[String]()
+    def add(name: String, value: String, attribute: Boolean = false): Unit = {
+      var nodeName = name
+      var field = record.getSchema.getField(nodeName)
+      var wildcard = false
+      if (field == null) {
+        field = record.getSchema.getField(Source.TEXT_VALUE)
+        if (field == null) {
+          field = record.getSchema.getField(Source.WILDCARD)
+          if (field == null)
+            System.err.println(s"WARNING: ${if (attribute) "Attribute" else "Element"} $name not found in Schema (even as a wildcard)")
+          else wildcard = true
+        } else nodeName = Source.TEXT_VALUE
+      }
 
-  def option(text: String): Option[String] = {
-    if (text.trim == "") None else Option(text)
+      if (wildcard) {
+        val wildField = record.get(Source.WILDCARD).asInstanceOf[util.Map[String, AnyRef]]
+        wildField.put(nodeName, value)
+      } else {
+        var fieldSchema = AvroUtils.getSchema(field)
+        var fieldType = fieldSchema getType()
+        if (fieldType == ARRAY)
+          fieldType = fieldSchema.getElementType.getType
+        record.put(nodeName, AvroUtils.createValue(fieldType, value))
+      }
+    }
   }
+
 }
 
 object Implicits extends Implicits

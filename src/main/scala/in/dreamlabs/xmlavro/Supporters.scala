@@ -64,6 +64,7 @@ object Source {
   val SOURCE = "source"
   val DOCUMENT = "document"
   val WILDCARD = "others"
+  val TEXT_VALUE = "text_value"
 }
 
 class Source(val name: String, val attribute: Boolean) {

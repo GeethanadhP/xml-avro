@@ -220,11 +220,11 @@ class SchemaFixer(rootFile: Path, baseDir: Option[Path] = None) {
       var extnType = complexType
       while (extnType.getBaseType.getTypeCategory == XSTypeDefinition.COMPLEX_TYPE) extnType =
         extnType.getBaseType.asInstanceOf[XSComplexTypeDefinition]
-      val name = validName(SchemaFixer.TEXT_VALUE)
+      val name = validName(Source.TEXT_VALUE)
       val fieldSchema =
         processType(extnType.getBaseType, optional = true, array = false)
       val field = new Field(name.get, fieldSchema, null, null)
-      field.addProp(Source.SOURCE, Source(SchemaFixer.TEXT_VALUE).toString())
+      field.addProp(Source.SOURCE, Source(Source.TEXT_VALUE).toString())
       fields += (field.getProp(Source.SOURCE) -> field)
     }
     fields
@@ -396,7 +396,7 @@ object SchemaFixer {
   )
   val HIVE_KEYWORDS: List[String] =
     List("EXCHANGE", "OVER", "TIMESTAMP", "DATETIME")
-  val TEXT_VALUE = "text_value"
+
 
   def main(args: Array[String]): Unit = {
     var schema: SchemaFixer = null

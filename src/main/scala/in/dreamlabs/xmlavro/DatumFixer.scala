@@ -236,7 +236,7 @@ class DatumFixer(schema: Schema,
       val eleValue = element.getTextContent
       if (eleValue != null && !eleValue.equals("")) {
         val field =
-          getFieldBySource(schema, Source(SchemaFixer.TEXT_VALUE).toString)
+          getFieldBySource(schema, Source(Source.TEXT_VALUE).toString)
         if (field isDefined) {
           val attr = element.getFirstChild
           val datum = createNode(field.get.schema, attr, false)
