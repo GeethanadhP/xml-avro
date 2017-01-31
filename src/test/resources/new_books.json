@@ -26,7 +26,114 @@
         }
       ],
       "type0": [],
+      "type2": [],
+      "type6": null,
       "sold": "10"
+    },
+    {
+      "id": "b002",
+      "others": {},
+      "author": "Dan Brown",
+      "title": "Angels and Demons",
+      "genre": "Mystery Thriller",
+      "price": [
+        {
+          "currency": "EUR",
+          "text_value": null
+        },
+        {
+          "currency": null,
+          "text_value": 52.0
+        }
+      ],
+      "pub_date": 1040117447000,
+      "review": [
+        {
+          "title": "Good Thriller",
+          "content": null
+        },
+        {
+          "title": "Fast paced mystery",
+          "content": null
+        },
+        {
+          "title": null,
+          "content": "a good one i would say"
+        }
+      ],
+      "type0": [
+        {
+          "alias": null,
+          "website": {
+            "url": "www.danbrown.com"
+          }
+        }
+      ],
+      "type2": [
+        {
+          "type4": [
+            {
+              "alias2": {
+                "title": "A2 Angleso and Demenso",
+                "language": []
+              },
+              "website2": null
+            }
+          ]
+        }
+      ],
+      "type6": {
+        "alias3": "A3 Angleso and Demenso"
+      },
+      "sold": []
+    },
+    {
+      "id": "b003",
+      "others": {},
+      "author": "Dan Brown",
+      "title": "Digital Fortress",
+      "genre": "Mystery Thriller",
+      "price": [],
+      "pub_date": 1071653447000,
+      "review": [
+        {
+          "title": "Best SciFi Thriller",
+          "content": null
+        },
+        {
+          "title": "Best SciFi Thriller2",
+          "content": null
+        },
+        {
+          "title": "Best SciFi Thriller3",
+          "content": null
+        }
+      ],
+      "type0": [
+        {
+          "alias": {
+            "title": "Encryto",
+            "language": []
+          },
+          "website": null
+        },
+        {
+          "alias": {
+            "title": null,
+            "language": "French"
+          },
+          "website": null
+        },
+        {
+          "alias": null,
+          "website": {
+            "url": "www.danbrown.com"
+          }
+        }
+      ],
+      "type2": [],
+      "type6": null,
+      "sold": "23"
     }
   ]
 }

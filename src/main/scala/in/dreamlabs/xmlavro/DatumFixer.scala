@@ -379,15 +379,4 @@ object DatumFixer {
 
   private val IGNORED_NAMES: List[String] = List("xml:lang")
 
-  def main(args: Array[String]): Unit = {
-    val schema = new SchemaFixer(
-      Path("C:/Users/p3008264/git/xml-avro/src/test/resources/books.xsd"),
-      Option(
-        Path("C:/Users/p3008264/git/xml-avro/xml-avro/src/test/resources")))
-    val data = new DatumFixer(
-      schema.schema,
-      Path("C:/Users/p3008264/git/xml-avro/src/test/resources/books.xml").toFile
-        .bufferedInput())
-    println(data.datums.iterator.next())
-  }
 }

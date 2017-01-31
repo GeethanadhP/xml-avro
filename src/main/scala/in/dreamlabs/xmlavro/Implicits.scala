@@ -6,6 +6,7 @@ import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 
 import in.dreamlabs.xmlavro.XMLEvents._
 import org.apache.avro.Schema.Type._
+import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericData.Record
 
 import scala.collection.mutable
@@ -46,7 +47,7 @@ trait Implicits {
           val name = attr.getName.getLocalPart
           val attrName =
             if (option(ns) isDefined)
-              s"$ns:$name"
+              name //s"$ns:$name"
             else
               name
           if (name.toLowerCase() != "schemalocation")
@@ -77,11 +78,12 @@ trait Implicits {
         tmp(tmp.length - 1)
       }
 
-    def push(): Unit =
-      if (ns isDefined) addElement(s"${ns get}:$name") //eleStack = s"${ns get}:$name" :: eleStack
-      else addElement(name) //eleStack = name :: eleStack
+    def push(): Boolean = addElement(name)
 
-    def pop(): Unit = removeElement(name) //eleStack = eleStack.tail
+    //      if (ns isDefined) addElement(s"${ns get}:$name")
+    //      else addElement(name)
+
+    def pop(): Unit = removeElement(name)
 
     def element: String = eleStack.head
 
@@ -96,16 +98,26 @@ trait Implicits {
       path.foreach {
         path =>
           if (path.pathType == ARRAY) {
-            val array = resultRecord.get(path name).asInstanceOf[util.List[AnyRef]]
-            if (array.size() - 1 < path.index) {
+            var array = resultRecord.get(path name).asInstanceOf[util.List[AnyRef]]
+            if (array == null || array.size() - 1 < path.index) {
               val arraySchema = AvroUtils.getSchema(resultRecord.getSchema.getField(path name)).getElementType
-              val arrayRecord = AvroUtils.createRecord(arraySchema)
-              array.add(arrayRecord)
-              resultRecord = arrayRecord
+              if (array == null) {
+                resultRecord.put(path name, new util.ArrayList[AnyRef]())
+                array = resultRecord.get(path name).asInstanceOf[util.List[AnyRef]]
+              }
+              resultRecord = AvroUtils.createRecord(arraySchema)
+              array.add(resultRecord)
             } else
               resultRecord = array.get(path index).asInstanceOf[Record]
-          } else
-            resultRecord.get(path name)
+          } else {
+            val tempSchema = AvroUtils.getSchema(resultRecord.getSchema.getField(path name))
+            var tempRecord = resultRecord.get(path name).asInstanceOf[Record]
+            if (tempRecord == null) {
+              resultRecord.put(path name, AvroUtils.createRecord(tempSchema))
+              tempRecord = resultRecord.get(path name).asInstanceOf[Record]
+            }
+            resultRecord = tempRecord
+          }
       }
       resultRecord
     }
@@ -127,12 +139,22 @@ trait Implicits {
       if (wildcard) {
         val wildField = record.get(Source.WILDCARD).asInstanceOf[util.Map[String, AnyRef]]
         wildField.put(nodeName, value)
-      } else {
+      } else if (field != null) {
         var fieldSchema = AvroUtils.getSchema(field)
         var fieldType = fieldSchema getType()
-        if (fieldType == ARRAY)
+        if (fieldType == ARRAY) {
           fieldType = fieldSchema.getElementType.getType
-        record.put(nodeName, AvroUtils.createValue(fieldType, value))
+          var array = record.get(nodeName).asInstanceOf[util.List[AnyRef]]
+          if (array == null) {
+            record.put(nodeName, new util.ArrayList[AnyRef]())
+            array = record.get(nodeName).asInstanceOf[util.List[AnyRef]]
+//            array = new GenericData.Array[AnyRef](0, fieldSchema getElementType)
+//            record.put(nodeName, array)
+//            array = record.get(nodeName).asInstanceOf[util.List[AnyRef]]
+          }
+          array.add(AvroUtils.createValue(fieldType, value))
+        } else
+          record.put(nodeName, AvroUtils.createValue(fieldType, value))
       }
     }
   }

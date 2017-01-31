@@ -21,11 +21,16 @@
         }
       ],
       "type0": [],
+      "type2": [],
+      "type6": null,
       "sold": []
     },
     {
       "id": "b002",
-      "others": {},
+      "others": {
+        "alias3": "A3 Angleso and Demenso",
+        "alias2": "\r\n            <title>A2 Angleso and Demenso<\/title>\r\n        "
+      },
       "author": "Dan Brown",
       "title": "Angels and Demons",
       "genre": "Mystery Thriller",
@@ -43,19 +48,14 @@
       ],
       "type0": [
         {
-          "alias": {
-            "title": "Angleso and Demenso",
-            "language": null
-          },
-          "website": null
-        },
-        {
           "alias": null,
           "website": {
             "url": []
           }
         }
       ],
+      "type2": [],
+      "type6": null,
       "sold": null
     },
     {
@@ -87,6 +87,8 @@
           }
         }
       ],
+      "type2": [],
+      "type6": null,
       "sold": []
     }
   ]

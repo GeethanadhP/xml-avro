@@ -14,6 +14,7 @@ trait Config {
   var xsdFile, xmlFile: Path = _
   var avroFile, avscFile: Path = _
   var baseDir: Path = _
+  var rebuildChoice: Boolean = true
   var validationSchema: Path = _
   var debug, stdout, skipMissing: Boolean = false
   var split: String = ""
@@ -65,7 +66,7 @@ class CommandLineConfig(args: Array[String]) extends Config {
     args(i)
   }
 
-  private def fetchXSDParams: Unit = {
+  private def fetchXSDParams(): Unit = {
     if (i == length - 1)
       throw new IllegalArgumentException("XSD File missing in arguments")
     i += 1
@@ -111,7 +112,7 @@ object CommandLineConfig {
     "{-d|--debug} {-b|--baseDir <baseDir>} {-xsd|--toAvsc <xsdFile> {<avscFile>}} {-s|--stream|--stdout} {-xml|--toAvro {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>}} {-i|--ignoreMissing}"
   val USAGE: String = "XSD to AVSC Usage : " + USAGE1 + "\nXML to AVRO Usage : " + USAGE2 + "\nMixed Usage : " + USAGE3
 
-  def apply(args: Array[String]): CommandLineConfig =    new CommandLineConfig(args)
+  def apply(args: Array[String]): CommandLineConfig = new CommandLineConfig(args)
 }
 
 class ConfigFile(val ignoreWarings: Boolean,
