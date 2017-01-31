@@ -15,14 +15,14 @@ import org.apache.avro.generic.GenericData.Record
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
-
+import scala.collection.JavaConverters._
 /**
   * Created by Royce on 28/01/2017.
   */
-class AvroPath(val name: String, val pathType: Type, eleStack: ListBuffer[String], val virtual: Boolean = false) {
+class AvroPath(val name: String, val pathType: Type, currentPath: ListBuffer[AvroPath], val virtual: Boolean = false) {
   private val innerName = StringBuilder.newBuilder
   innerName append s"$name"
-  eleStack.foreach(element => innerName append s"@$element")
+  currentPath.foreach(path => innerName append path.toString)
   val index: Int =
     if (countsMap contains innerName.mkString) {
       var currentIndex = countsMap(innerName.mkString)
@@ -46,7 +46,7 @@ class AvroPath(val name: String, val pathType: Type, eleStack: ListBuffer[String
 
 
 object AvroPath {
-  def apply(name: String, pathType: Type, eleStack: ListBuffer[String], virtual: Boolean = false) = new AvroPath(name, pathType, eleStack, virtual)
+  def apply(name: String, pathType: Type, currentPath: ListBuffer[AvroPath], virtual: Boolean = false) = new AvroPath(name, pathType, currentPath, virtual)
 
   val countsMap: mutable.Map[String, Int] = mutable.Map[String, Int]()
 
@@ -90,9 +90,10 @@ object XMLEvents {
   private def destroyLastPath(): Int = {
     val tempPath = schemaPath.last
     schemaPath -= tempPath
-    tempPath destroy()
+    //    tempPath destroy()
     schemaPath size
   }
+
   def removeElement(name: String): Unit = {
     eleStack.remove(0)
     var count = schemaPath.size
@@ -117,19 +118,18 @@ object XMLEvents {
     val path = ListBuffer[AvroPath]()
     if (field == null)
       breakable {
-        fieldSchema.getFields.forEach {
-          typeField =>
-            if (typeField name() startsWith "type") {
-              val (resultField, resultPath, resultSchema) = findField(AvroUtils.getSchema(typeField), name)
-              if (resultField != null) {
-                val (tempPath, tempSchema) = getPath(typeField, virtual = true)
-                resultPath ++= tempPath
-                path ++= resultPath
-                field = resultField
-                fieldSchema = resultSchema
-                break
-              }
+        for (typeField <- fieldSchema.getFields.asScala){
+          if (typeField name() startsWith "type") {
+            val (resultField, resultPath, resultSchema) = findField(AvroUtils.getSchema(typeField), name)
+            if (resultField != null) {
+              val (tempPath, tempSchema) = getPath(typeField, virtual = true)
+              resultPath ++= tempPath
+              path ++= resultPath
+              field = resultField
+              fieldSchema = resultSchema
+              break
             }
+          }
         }
       }
     (field, path, fieldSchema)
@@ -143,12 +143,12 @@ object XMLEvents {
       case ARRAY =>
         val itemType = fieldSchema getElementType()
         if (itemType.getType == RECORD) {
-          path += AvroPath(name, ARRAY, eleStack, virtual)
+          path += AvroPath(name, ARRAY, schemaPath ++ path.reverse, virtual)
           fieldSchema = itemType
         } else if (!PRIMITIVES.contains(itemType.getType))
           System.err.println(s"WARNING: 1 - Unknown type $itemType for $name")
       case RECORD =>
-        path += AvroPath(name, RECORD, eleStack, virtual)
+        path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
       case other => if (!PRIMITIVES.contains(other)) System.err.println(s"WARNING: 2 - Unknown type $other for $name")
     }
     (path, fieldSchema)
@@ -161,12 +161,12 @@ object XMLEvents {
       case ARRAY =>
         val itemType = fieldSchema getElementType()
         if (itemType.getType == RECORD) {
-          schemaPath += AvroPath(name, ARRAY, eleStack, virtual)
+          schemaPath += AvroPath(name, ARRAY, schemaPath, virtual)
           lastSchema = itemType
         } else if (!PRIMITIVES.contains(itemType.getType))
           System.err.println(s"WARNING: 1 - Unknown type $itemType for $name")
       case RECORD =>
-        schemaPath += AvroPath(name, RECORD, eleStack, virtual)
+        schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
         lastSchema = fieldSchema
       case other => if (!PRIMITIVES.contains(other)) System.err.println(s"WARNING: 2 - Unknown type $other for $name")
     }
