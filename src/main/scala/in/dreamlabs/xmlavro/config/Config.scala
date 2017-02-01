@@ -1,7 +1,10 @@
-package in.dreamlabs.xmlavro
+package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.ConvertMode.ConvertMode
+import in.dreamlabs.xmlavro.RootConfig
 import in.dreamlabs.xmlavro.Utils._
+import in.dreamlabs.xmlavro.config.ConvertMode.ConvertMode
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.Constructor
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.io.Path
@@ -37,16 +40,16 @@ class CommandLineConfig(args: Array[String]) extends Config {
   while (i < length) {
     val arg = args(i)
     if (arg startsWith "-") arg match {
-      case "-d" | "--debug" => debug = true
-      case "-b" | "--baseDir" =>
-        baseDir = Path(fetchArg("Base directory location"))
       case "-c" | "--config" =>
         configFile = Path(fetchArg("Config file location"))
         isAdvanced = true
         processConfigFile()
+      case "-d" | "--debug" => debug = true
+      case "-b" | "--baseDir" =>
+        baseDir = Path(fetchArg("Base directory location"))
       case "-s" | "--stdout" | "--stream" => stdout = true
-      case "-xsd" | "--toAvsc" => fetchXSDParams
-      case "-xml" | "--toAvro" => fetchXMLParams
+      case "-xsd" | "--toAvsc" => fetchXSDParams()
+      case "-xml" | "--toAvro" => fetchXMLParams()
       case "-sb" | "--splitby" => split = fetchArg("Split element name")
       case "-i" | "--ignoreMissing" => skipMissing = true
       case "-v" | "--validateSchema" =>
@@ -78,7 +81,7 @@ class CommandLineConfig(args: Array[String]) extends Config {
     modes += ConvertMode.XSD
   }
 
-  private def fetchXMLParams: Unit = {
+  private def fetchXMLParams(): Unit = {
     if (avscFile == null && i == args.length - 1)
       throw new IllegalArgumentException("AVSC File missing in arguments")
     else if (avscFile == null) {
@@ -99,7 +102,11 @@ class CommandLineConfig(args: Array[String]) extends Config {
   }
 
   private def processConfigFile(): Unit = {
-
+    val configReader = configFile.toFile.bufferedReader()
+    val obj = new Yaml(new Constructor(classOf[RootConfig])) load configReader
+    val config = obj.asInstanceOf[RootConfig]
+    println(config.baseDir)
+    println(config)
   }
 }
 
@@ -114,8 +121,3 @@ object CommandLineConfig {
 
   def apply(args: Array[String]): CommandLineConfig = new CommandLineConfig(args)
 }
-
-class ConfigFile(val ignoreWarings: Boolean,
-                 val splitBy: String,
-                 val caseSensitive: Boolean,
-                 val ignoreCaseList: List[String])

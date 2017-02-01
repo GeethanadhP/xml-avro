@@ -5,6 +5,7 @@ import java.lang.management.ManagementFactory
 import java.util
 import java.util.Calendar
 
+import in.dreamlabs.xmlavro.config.{CommandLineConfig, Config, ConvertMode}
 import net.elodina.xmlavro.SchemaBuilder
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
