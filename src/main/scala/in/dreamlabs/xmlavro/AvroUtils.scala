@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
 class AvroPath(val name: String, val pathType: Type, currentPath: ListBuffer[AvroPath], val virtual: Boolean = false) {
   private val innerName = StringBuilder.newBuilder
   innerName append s"$name"
-  currentPath.foreach(path => innerName append path.toString)
+  currentPath.foreach(path => innerName append path.toString.replace(path name, ""))
   val index: Int =
     if (countsMap contains innerName.mkString) {
       var currentIndex = countsMap(innerName.mkString)
