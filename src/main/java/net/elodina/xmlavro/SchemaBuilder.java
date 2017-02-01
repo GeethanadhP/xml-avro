@@ -50,7 +50,7 @@ public class SchemaBuilder {
         primitives.put(XSConstants.DECIMAL_DT, Schema.Type.DOUBLE);
 
         primitives.put(XSConstants.DATETIME_DT, Schema.Type.LONG);
-        String[] keywords = {"exchange", "over"};
+        String[] keywords = {"EXCHANGE", "OVER", "TIMESTAMP", "DATETIME"};
         HIVE_KEYWORDS.addAll(Arrays.asList(keywords));
     }
 
@@ -223,7 +223,7 @@ public class SchemaBuilder {
         Schema record = Schema.createRecord(name, null, null, false);
         schemas.put(name, record);
 
-        Map<String, Schema.Field> fields = new HashMap<>();
+        Map<String, Schema.Field> fields = new LinkedHashMap<>();
         createGroupFields(groupTerm, fields, false);
         record.setFields(new ArrayList<>(fields.values()));
 
@@ -396,8 +396,8 @@ public class SchemaBuilder {
         }
 
         // Handle hive keywords
-        if (HIVE_KEYWORDS.contains(s.toLowerCase())) {
-            s = s + "2";
+        if (HIVE_KEYWORDS.contains(s.toUpperCase())) {
+            s = s + "_value";
         }
 
         return s;

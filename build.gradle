@@ -1,25 +1,37 @@
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'scala'
 
 group = 'net.elodina'
-version = '0.7'
+version = '1.0'
 
-description = "A simple tool to conver xml to avro and their respective schemas"
+description = "A simple tool to convert xml to avro and their respective schemas"
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
-
+//ScalaCompileOptions.metaClass.daemonServer = true
+//ScalaCompileOptions.metaClass.fork = true
+//ScalaCompileOptions.metaClass.useAnt = false
+//ScalaCompileOptions.metaClass.useCompileDaemon = false
 
 repositories {
     maven { url "http://repo.maven.apache.org/maven2" }
 }
 
 dependencies {
-    compile 'org.slf4j:slf4j-api:1.7.5'
+    compile 'org.scala-lang:scala-library:2.12.1'
+    compile 'org.scala-lang:scala-reflect:2.12.1'
+//    compile 'org.scala-lang.modules:scala-xml_2.12:1.0.6'
+//    compile 'com.scalawilliam:xs4s_2.11:0.3'
+//    compile 'net.jcazevedo:moultingyaml_2.12:0.4.0'
+//    compile 'org.slf4j:slf4j-api:1.7.5'
     compile 'org.apache.avro:avro:1.7.5'
     compile 'org.skyscreamer:jsonassert:1.2.3'
     compile 'xerces:xercesImpl:2.11.0'
+    compile 'org.yaml:snakeyaml:1.17'
+
+//    compile 'xerces:xercesImpl:2.11.0.SP5'
     testCompile 'junit:junit:4.8.1'
 }
 
@@ -27,10 +39,18 @@ task fatJar(type: Jar) {
     manifest {
         attributes 'Implementation-Title': name,
                 'Implementation-Version': version,
-                'Main-Class': 'net.elodina.xmlavro.AdvancedConverter'
+                'Main-Class': 'in.dreamlabs.xmlavro.Converter'
     }
     baseName = project.name + '-all'
     from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
+
+task copyLibs(type: Copy) {
+    into buildDir.absolutePath + '/libs/libs'
+    from configurations.testRuntime
+}
+
+
+fatJar.dependsOn(copyLibs)
 build.dependsOn(fatJar)

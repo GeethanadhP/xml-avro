@@ -26,7 +26,7 @@ import java.util.*;
 public class DatumBuilder {
     private static final List<Schema.Type> PRIMITIVES;
     private static TimeZone defaultTimeZone = TimeZone.getTimeZone("UTC-0");
-    private static final String pattern = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*Z?$";
+    private static final String pattern = "^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*)Z?$";
 
 
     static {
@@ -35,7 +35,7 @@ public class DatumBuilder {
     }
 
     private Schema schema;
-    private boolean caseSensitiveNames = true;
+    private boolean caseSensitiveNames = false; //TODO make it true again
     private String split;
     private boolean skipMissingElements, skipMissingAttributes;
     private File validationSchema;
@@ -83,6 +83,17 @@ public class DatumBuilder {
 
     public static void setDefaultTimeZone(TimeZone timeZone) {
         defaultTimeZone = timeZone;
+    }
+
+    private static long parseDateTimeLocal(String text) {
+        text = text.trim();
+        Calendar c = null;
+        if (!text.matches(pattern)) {
+            text = text.substring(0, 19);
+        }
+        c = DatatypeConverter.parseDateTime(text);
+        c.setTimeZone(defaultTimeZone);
+        return c.getTimeInMillis();
     }
 
     private static long parseDateTime(String text) {
@@ -189,7 +200,7 @@ public class DatumBuilder {
     @SuppressWarnings("unchecked")
     private Object createArray(Schema schema, Element el) {
         NodeList childNodes = el.getChildNodes();
-        Schema elementType = schema.getElementType();
+        Schema childType = schema.getElementType();
         int numElements = childNodes.getLength();
         @SuppressWarnings("rawtypes")
         GenericData.Array array = new GenericData.Array(numElements, schema);
@@ -200,7 +211,7 @@ public class DatumBuilder {
                 continue;
             Element child = (Element) childNodes.item(i);
             // noinspection unchecked
-            array.add(createNodeDatum(elementType, child, true));
+            array.add(createNodeDatum(childType, child, true));
         }
         return array;
     }
@@ -217,13 +228,13 @@ public class DatumBuilder {
 
     private Object createValue(Schema.Type type, String text) {
         if (type == Schema.Type.BOOLEAN)
-            return "true".equals(text) || "1".equals(text);
+            return "true".equals(text.toLowerCase()) || "1".equals(text);
 
         if (type == Schema.Type.INT)
             return Integer.parseInt(text);
 
         if (type == Schema.Type.LONG)
-            return text.contains("T") ? parseDateTime(text) : Long.parseLong(text);
+            return text.contains("T") ? parseDateTimeLocal(text) : Long.parseLong(text);
 
         if (type == Schema.Type.FLOAT)
             return Float.parseFloat(text);
@@ -256,7 +267,6 @@ public class DatumBuilder {
         } else {
             NodeList nodes = rootRecord ? el.getOwnerDocument().getChildNodes() : el.getChildNodes();
             for (int i = 0; i < nodes.getLength(); i++) {
-                Node node = nodes.item(i);
                 setFieldFromNode(schema, record, nodes.item(i));
             }
         }
@@ -265,7 +275,7 @@ public class DatumBuilder {
             NamedNodeMap attrMap = el.getAttributes();
             for (int i = 0; i < attrMap.getLength(); i++) {
                 Attr attr = (Attr) attrMap.item(i);
-
+                // TODO revert to getName and handle namespace
                 List<String> ignoredNamespaces = Arrays.asList("http://www.w3.org/2000/xmlns/",
                         "http://www.w3.org/2001/XMLSchema-instance");
                 if (ignoredNamespaces.contains(attr.getNamespaceURI()))
@@ -276,7 +286,7 @@ public class DatumBuilder {
                     continue;
 
                 if (!setRecordFieldFromNode) {
-                    Schema.Field field = getFieldBySource(schema, new Source(attr.getName(), true));
+                    Schema.Field field = getFieldBySource(schema, new Source(attr.getLocalName(), true));
                     if (field == null) {
                         // Handle wildcard attributes
                         Schema.Field anyField = schema.getField(Source.WILDCARD);
@@ -376,7 +386,6 @@ public class DatumBuilder {
         if (schema.getType() != Schema.Type.RECORD) {
             return null;
         }
-
         for (Schema.Field field : schema.getFields()) {
             Schema topSchema = field.schema();
             switch (topSchema.getType()) {
@@ -386,7 +395,8 @@ public class DatumBuilder {
                         try {
                             tempSource = field.getProp("source");
                         } catch (Exception e) {
-
+                            System.err.print("WARNING: ");
+                            e.printStackTrace(System.err);
                         }
                         if (tempSource == null || tempSource.equals("None")) {
                             Schema.Field fieldBySource = getFieldBySource(topSchema.getElementType(), source);
