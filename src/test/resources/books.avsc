@@ -13,6 +13,12 @@
           "type" : [ "null", "string" ],
           "source" : "attribute id"
         }, {
+          "name" : "others",
+          "type" : {
+            "type" : "map",
+            "values" : "string"
+          }
+        }, {
           "name" : "author",
           "type" : "string",
           "source" : "element author"
@@ -26,13 +32,47 @@
           "source" : "element genre"
         }, {
           "name" : "price",
-          "type" : "float",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : {
+              "type" : "record",
+              "name" : "PriceType",
+              "fields" : [ {
+                "name" : "currency",
+                "type" : [ "null", "string" ],
+                "source" : "attribute currency"
+              }, {
+                "name" : "text_value",
+                "type" : [ "null", "double" ],
+                "source" : "element text_value"
+              } ]
+            }
+          } ],
           "source" : "element price"
         }, {
           "name" : "pub_date",
           "type" : [ "null", "long" ],
           "source" : "element pub_date",
           "comment" : "timestamp"
+        }, {
+          "name" : "review",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : {
+              "type" : "record",
+              "name" : "ReviewType",
+              "fields" : [ {
+                "name" : "title",
+                "type" : "string",
+                "source" : "element title"
+              }, {
+                "name" : "content",
+                "type" : [ "null", "string" ],
+                "source" : "element content"
+              } ]
+            }
+          } ],
+          "source" : "element review"
         }, {
           "name" : "type0",
           "type" : {
@@ -41,42 +81,49 @@
               "type" : "record",
               "name" : "type1",
               "fields" : [ {
-                "name" : "review",
-                "type" : [ "null", "string" ],
-                "source" : "element review"
-              }, {
-                "name" : "website",
-                "type" : [ "null", {
-                  "type" : "record",
-                  "name" : "WebsiteType",
-                  "fields" : [ {
-                    "name" : "web_url",
-                    "type" : {
-                      "type" : "array",
-                      "items" : "string"
-                    },
-                    "source" : "element web_url"
-                  } ]
-                } ],
-                "source" : "element website"
-              }, {
                 "name" : "alias",
-                "type" : [ "null", {
+                "type" : {
                   "type" : "record",
                   "name" : "AliasType",
                   "fields" : [ {
-                    "name" : "alias_name",
-                    "type" : {
+                    "name" : "title",
+                    "type" : "string",
+                    "source" : "element title"
+                  }, {
+                    "name" : "language",
+                    "type" : [ "null", {
                       "type" : "array",
                       "items" : "string"
-                    },
-                    "source" : "element alias_name"
+                    } ],
+                    "source" : "element language"
                   } ]
-                } ],
+                },
                 "source" : "element alias"
+              }, {
+                "name" : "website",
+                "type" : {
+                  "type" : "record",
+                  "name" : "WebsiteType",
+                  "fields" : [ {
+                    "name" : "url",
+                    "type" : [ "null", {
+                      "type" : "array",
+                      "items" : "string"
+                    } ],
+                    "source" : "element url"
+                  } ]
+                },
+                "source" : "element website"
               } ]
             }
           }
+        }, {
+          "name" : "sold",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : "string"
+          } ],
+          "source" : "element sold"
         } ]
       }
     },

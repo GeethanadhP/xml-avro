@@ -31,17 +31,12 @@ import scala.reflect.io.Path
   */
 final class SchemaFixer(xsdFile: Path, avscFile: Path) {
   var debug = false
-  private var _baseDir: Option[Path] = None
+  var baseDir: Option[Path] = None
   var rebuildChoice = true
   private var typeCount = -1
   private var typeLevel = 0
   private val schemas = mutable.Map[String, Schema]()
 
-  def baseDir: Option[Path] = _baseDir
-
-  def baseDir_=(path: Path) {
-    _baseDir = Some(path)
-  }
 
   def createSchema(): Unit = {
     val errorHandler = new ErrorHandler

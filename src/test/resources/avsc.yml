@@ -1,7 +1,7 @@
 dynamic: true
 dynamicSource: ENVIRONMENT
 debug: false
-baseDir: "test/resources"
+baseDir: "src/test/resources"
 namespaces: true
 XSD:
   xsdFile: "books.xsd"
