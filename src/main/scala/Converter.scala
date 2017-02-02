@@ -1,11 +1,9 @@
-package in.dreamlabs.xmlavro
-
 import java.io._
-import java.lang.management.ManagementFactory
 import java.util
 import java.util.Calendar
 
-import in.dreamlabs.xmlavro.config.{CommandLineConfig, Config, ConvertMode}
+import in.dreamlabs.xmlavro.config.{Config, ConfigParser, XSDConfig}
+import in.dreamlabs.xmlavro.{AvroBuilder, SchemaFixer}
 import net.elodina.xmlavro.SchemaBuilder
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
@@ -22,40 +20,35 @@ class Converter(val config: Config) {
   private var avscOut, avroOut: BufferedOutputStream = _
   private var xmlIn, xsdIn: BufferedInputStream = _
 
-  for (mode <- config.modes) {
-    mode match {
-      case ConvertMode.XSD =>
-        //        xsdIn = (config.xsdFile toFile) bufferedInput()
-        //        avscOut = (config.avscFile toFile) bufferedOutput()
-        convertXSD()
-      case ConvertMode.XML =>
-        if (config.stdout) {
-          xmlIn = new BufferedInputStream(System.in)
-          avroOut = new BufferedOutputStream(System.out)
-        } else {
-          xmlIn = (config.xmlFile toFile) bufferedInput ()
-          avroOut = (config.avroFile toFile) bufferedOutput ()
-          System.out.println(
-            "Converting: " + config.xmlFile + " -> " + config.avroFile)
-        }
-        convertXML(config.avscFile,
-                   config.split,
-                   config.skipMissing,
-                   config.validationSchema)
+  if (config.XSD isDefined)
+    convertXSD(config.XSD.get)
+  if (config.XML isDefined) {
+    val xConfig = config.XML.get
+    if (xConfig.streamingInput) {
+      xmlIn = new BufferedInputStream(System.in)
+      avroOut = new BufferedOutputStream(System.out)
+    } else {
+      xmlIn = (xConfig.xmlFile toFile) bufferedInput()
+      avroOut = (xConfig.avroFile toFile) bufferedOutput()
+      System.out.println(
+        "Converting: " + xConfig.xmlFile + " -> " + xConfig.avroFile)
     }
+    convertXML(xConfig.avscFile,
+      xConfig.splitBy,
+      xConfig.ignoreMissing,
+      xConfig.validationXSD)
   }
 
   @throws[IOException]
-  private def convertXSD() {
-    if (!config.stdout)
-      System.out.println(
-        "Converting: " + config.xsdFile + " -> " + config.avscFile)
+  private def convertXSD(xConfig: XSDConfig) {
+    System.out.println(
+      "Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
 
-    val schemaBuilder = SchemaFixer(config xsdFile, config avscFile)
+    val schemaBuilder = SchemaFixer(xConfig xsdFile, xConfig avscFile)
     schemaBuilder debug = config.debug
     schemaBuilder baseDir = config.baseDir
-    schemaBuilder rebuildChoice = config.rebuildChoice
-    schemaBuilder createSchema ()
+    schemaBuilder rebuildChoice = xConfig.rebuildChoice
+    schemaBuilder createSchema()
     //val schemaBuilder = new SchemaFixer(xsdIn,Option(config.baseDir))//new SchemaBuilder
     //    schemaBuilder setDebug (config debug)
     //    if (config.baseDir != null)
@@ -72,7 +65,6 @@ class Converter(val config: Config) {
   //    avscOut close()
   //  }
 
-  @throws[IOException]
   private def convertXML(avscFile: Path,
                          split: String,
                          skipMissing: Boolean,
@@ -87,7 +79,7 @@ class Converter(val config: Config) {
     val datums = new AvroBuilder(schema, split, true).createDatums(xmlIn)
     val endTime = Calendar.getInstance().getTimeInMillis
     System.err.println("Time taken: " + (endTime - startTime))
-    xmlIn close ()
+    xmlIn close()
     writeAvro(schema, datums)
   }
 
@@ -98,13 +90,13 @@ class Converter(val config: Config) {
     fileWriter.setCodec(CodecFactory.snappyCodec)
     fileWriter.create(schema, avroOut)
     for (datum <- datums.asScala) fileWriter.append(datum)
-    fileWriter flush ()
-    fileWriter close ()
-    avroOut close ()
+    fileWriter flush()
+    fileWriter close()
+    avroOut close()
   }
 
   private class BaseDirResolver(val baseDir: Path)
-      extends SchemaBuilder.Resolver {
+    extends SchemaBuilder.Resolver {
     // Change Working directory to the base directory
     System.setProperty("user.dir", baseDir.toAbsolute.path)
 
@@ -124,15 +116,15 @@ object Converter {
     val config = try {
       if (args isEmpty)
         throw new IllegalArgumentException("No Arguments specified")
-      else Config apply args
+      else ConfigParser apply args
     } catch {
       case e: IllegalArgumentException =>
         println(
-          "XML Avro converter\nError: " + e.getMessage + "\n\n" + CommandLineConfig.USAGE + "\n")
+          "XML Avro converter\nError: " + e.getMessage + "\n\n" + ConfigParser.USAGE + "\n")
         System.exit(1)
     }
-    Converter apply config.asInstanceOf[Config]
+    Converter apply config.asInstanceOf[ConfigParser]
   }
 
-  def apply(config: Config): Converter = new Converter(config)
+  def apply(config: ConfigParser): Converter = new Converter(config.config)
 }

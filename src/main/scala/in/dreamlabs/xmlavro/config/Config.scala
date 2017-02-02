@@ -1,123 +1,119 @@
 package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.RootConfig
-import in.dreamlabs.xmlavro.Utils._
-import in.dreamlabs.xmlavro.config.ConvertMode.ConvertMode
-import org.yaml.snakeyaml.Yaml
-import org.yaml.snakeyaml.constructor.Constructor
+import java.util
 
-import scala.collection.mutable.ListBuffer
+import scala.beans.BeanProperty
 import scala.reflect.io.Path
 
 /**
-  * Created by Royce on 21/12/2016.
+  * Created by Royce on 01/02/2017.
   */
-trait Config {
-  val modes = new ListBuffer[ConvertMode]()
-  var xsdFile, xmlFile: Path = _
-  var avroFile, avscFile: Path = _
-  var baseDir: Path = _
-  var rebuildChoice: Boolean = true
-  var validationSchema: Path = _
-  var debug, stdout, skipMissing: Boolean = false
-  var split: String = ""
-  var configFile: Path = _
-  var isAdvanced = false
-}
+class Config() {
+  @BeanProperty var dynamic: Boolean = false
+  @BeanProperty var dynamicSource: String = ""
+  @BeanProperty var debug: Boolean = false
+  var baseDir: Option[Path] = None
+  @BeanProperty var namespaces: Boolean = true
+  var XSD: Option[XSDConfig] = None
+  var XML: Option[XMLConfig] = None
 
-object Config {
-  def apply(args: Array[String]): Config = CommandLineConfig(args)
-}
 
-object ConvertMode extends Enumeration {
-  type ConvertMode = Value
-  val XML, XSD = Value
-}
+  def getBaseDir: String = if (baseDir isDefined) baseDir.get.path else null
 
-class CommandLineConfig(args: Array[String]) extends Config {
-  private val length = args.length
-  private var i = 0
-  while (i < length) {
-    val arg = args(i)
-    if (arg startsWith "-") arg match {
-      case "-c" | "--config" =>
-        configFile = Path(fetchArg("Config file location"))
-        isAdvanced = true
-        processConfigFile()
-      case "-d" | "--debug" => debug = true
-      case "-b" | "--baseDir" =>
-        baseDir = Path(fetchArg("Base directory location"))
-      case "-s" | "--stdout" | "--stream" => stdout = true
-      case "-xsd" | "--toAvsc" => fetchXSDParams()
-      case "-xml" | "--toAvro" => fetchXMLParams()
-      case "-sb" | "--splitby" => split = fetchArg("Split element name")
-      case "-i" | "--ignoreMissing" => skipMissing = true
-      case "-v" | "--validateSchema" =>
-        validationSchema =
-          replaceBaseDir(fetchArg("Validation schema location"), baseDir)
-      case _ => throw new IllegalArgumentException("Unsupported option " + arg)
-    } else
-      throw new IllegalArgumentException("Unsupported arguments format " + arg)
-    i += 1
+  def setBaseDir(value: String): Unit = {
+    baseDir = Option(Path(value).toAbsolute)
   }
 
-  private def fetchArg(name: String): String = {
-    if (i == length - 1)
-      throw new IllegalArgumentException("$name missing in arguments")
+  def getXSD: XSDConfig = XSD.orNull
+
+  def setXSD(value: XSDConfig): Unit = XSD = Option(value)
+
+  def getXML: XMLConfig = XML.orNull
+
+  def setXML(value: XMLConfig): Unit = XML = Option(value)
+
+  def finish(): Unit = {
+    if (XSD.isDefined && baseDir.isDefined)
+      XSD.get.use(baseDir get)
+    if (XSD.isDefined && XML.isDefined && baseDir.isDefined)
+      XML.get.use(baseDir get, XSD get)
+
+  }
+
+}
+
+class XSDConfig {
+  var xsdFile: Path = _
+  var avscFile: Path = _
+  @BeanProperty var rebuildChoice: Boolean = true
+
+  def getXsdFile: String = xsdFile.path
+
+  def setXsdFile(value: String): Unit = {
+    xsdFile = Path(value)
+  }
+
+  def getAvscFile: String = avscFile.path
+
+  def setAvscFile(value: String): Unit = {
+    avscFile = Path(value)
+  }
+
+  def use(baseDir: Path): Unit = {
+    xsdFile = xsdFile toAbsoluteWithRoot baseDir
+    if (Option(avscFile) isDefined)
+      avscFile = avscFile toAbsoluteWithRoot baseDir
     else
-      i += 1
-    args(i)
-  }
-
-  private def fetchXSDParams(): Unit = {
-    if (i == length - 1)
-      throw new IllegalArgumentException("XSD File missing in arguments")
-    i += 1
-    xsdFile = replaceBaseDir(args(i), baseDir)
-    if (i < length - 1 && !args(i + 1).startsWith("-")) {
-      i += 1
-      avscFile = replaceBaseDir(args(i), baseDir)
-    } else avscFile = replaceExtension(xsdFile, "avsc")
-    modes += ConvertMode.XSD
-  }
-
-  private def fetchXMLParams(): Unit = {
-    if (avscFile == null && i == args.length - 1)
-      throw new IllegalArgumentException("AVSC File missing in arguments")
-    else if (avscFile == null) {
-      i += 1
-      avscFile = replaceBaseDir(args(i), baseDir)
-    }
-    if (!stdout && i == args.length - 1)
-      throw new IllegalArgumentException("XML File missing in arguments")
-    if (!stdout) {
-      i += 1
-      xmlFile = replaceBaseDir(args(i), baseDir)
-      if (i < args.length - 1 && !args(i + 1).startsWith("-")) {
-        i += 1
-        xmlFile = replaceBaseDir(args(i), baseDir)
-      } else avroFile = replaceExtension(xmlFile, "avro")
-    }
-    modes += ConvertMode.XML
-  }
-
-  private def processConfigFile(): Unit = {
-    val configReader = configFile.toFile.bufferedReader()
-    val obj = new Yaml(new Constructor(classOf[RootConfig])) load configReader
-    val config = obj.asInstanceOf[RootConfig]
-    println(config.baseDir)
-    println(config)
+      avscFile = xsdFile changeExtension "avsc"
   }
 }
 
-object CommandLineConfig {
-  val USAGE1 =
-    "{-d|--debug} {-b|--baseDir <baseDir>} -xsd|--toAvsc <xsdFile> {<avscFile>}"
-  val USAGE2 =
-    "{-b|--baseDir <baseDir>} {-s|--stream|--stdout} -xml|--toAvro <avscFile> {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>} {-i|--ignoreMissing} {-v|--validateSchema <xsdFile>}"
-  val USAGE3 =
-    "{-d|--debug} {-b|--baseDir <baseDir>} {-xsd|--toAvsc <xsdFile> {<avscFile>}} {-s|--stream|--stdout} {-xml|--toAvro {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>}} {-i|--ignoreMissing}"
-  val USAGE: String = "XSD to AVSC Usage : " + USAGE1 + "\nXML to AVRO Usage : " + USAGE2 + "\nMixed Usage : " + USAGE3
+class XMLConfig {
+  var xmlFile: Path = _
+  var avscFile: Path = _
+  var avroFile: Path = _
+  var validationXSD: Path = _
+  @BeanProperty var splitBy: String = ""
+  @BeanProperty var ignoreMissing: Boolean = false
+  @BeanProperty var streamingInput: Boolean = false
+  @BeanProperty var caseSensitive: Boolean = true
+  @BeanProperty var ignoreCaseFor: util.List[String] = new util.ArrayList[String]
 
-  def apply(args: Array[String]): CommandLineConfig = new CommandLineConfig(args)
+  def getXmlFile: String = xmlFile.path
+
+  def setXmlFile(value: String): Unit = {
+    xmlFile = Path(value)
+  }
+
+  def getAvscFile: String = avscFile.path
+
+  def setAvscFile(value: String): Unit = {
+    avscFile = Path(value)
+  }
+
+  def getAvroFile: String = avroFile.path
+
+  def setAvroFile(value: String): Unit = {
+    avroFile = Path(value)
+  }
+
+  def getValidationXSD: String = validationXSD.path
+
+  def setValidationXSD(value: String): Unit = {
+    validationXSD = Path(value)
+  }
+
+  def use(baseDir: Path, xsdConfig: XSDConfig): Unit = {
+    xmlFile = xmlFile toAbsoluteWithRoot baseDir
+
+    if (Option(avroFile) isDefined)
+      avroFile = avroFile toAbsoluteWithRoot baseDir
+    else
+      avroFile = xmlFile changeExtension "avsc"
+
+    if (Option(avscFile) isDefined)
+      avscFile = avscFile toAbsoluteWithRoot baseDir
+    else
+      avscFile = xsdConfig avscFile
+  }
 }
