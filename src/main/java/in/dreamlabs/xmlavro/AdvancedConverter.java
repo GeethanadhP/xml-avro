@@ -17,7 +17,7 @@
 package in.dreamlabs.xmlavro;
 
 import net.elodina.xmlavro.DatumBuilder;
-import net.elodina.xmlavro.SchemaBuilder;
+import net.elodina.xmlavro.OldSchemaBuilder;
 import org.apache.avro.Schema;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
@@ -80,7 +80,7 @@ public class AdvancedConverter {
     }
 
     private void convertXSD() throws IOException {
-        SchemaBuilder schemaBuilder = new SchemaBuilder();
+        OldSchemaBuilder schemaBuilder = new OldSchemaBuilder();
         schemaBuilder.setDebug(debug);
         if (baseDir != null) {
             schemaBuilder.setResolver(new BaseDirResolver(baseDir));
@@ -114,7 +114,7 @@ public class AdvancedConverter {
         fileWriter.close();
     }
 
-    private static class BaseDirResolver implements SchemaBuilder.Resolver {
+    private static class BaseDirResolver implements OldSchemaBuilder.Resolver {
         private final File baseDir;
 
         private BaseDirResolver(File baseDir) {

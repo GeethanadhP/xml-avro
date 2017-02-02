@@ -3,8 +3,8 @@ import java.util
 import java.util.Calendar
 
 import in.dreamlabs.xmlavro.config.{Config, ConfigParser, XSDConfig}
-import in.dreamlabs.xmlavro.{AvroBuilder, SchemaFixer}
-import net.elodina.xmlavro.SchemaBuilder
+import in.dreamlabs.xmlavro.{AvroBuilder, SchemaBuilder}
+import net.elodina.xmlavro.OldSchemaBuilder
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.specific.SpecificDatumWriter
@@ -44,26 +44,13 @@ class Converter(val config: Config) {
     System.out.println(
       "Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
 
-    val schemaBuilder = SchemaFixer(xConfig xsdFile, xConfig avscFile)
+    val schemaBuilder = SchemaBuilder(xConfig xsdFile, xConfig avscFile)
     schemaBuilder debug = config.debug
     schemaBuilder baseDir = config.baseDir
     schemaBuilder rebuildChoice = xConfig.rebuildChoice
+    schemaBuilder namespaces = config.namespaces
     schemaBuilder createSchema()
-    //val schemaBuilder = new SchemaFixer(xsdIn,Option(config.baseDir))//new SchemaBuilder
-    //    schemaBuilder setDebug (config debug)
-    //    if (config.baseDir != null)
-    //      schemaBuilder setResolver new BaseDirResolver(config.baseDir)
-    //    val schema = schemaBuilder.createSchema(xsdIn)
-    //    xsdIn close()
-    //    writeAvsc(schema)
-    //    writeAvsc
   }
-
-  //  @throws[IOException]
-  //  private def writeAvsc(schema: Schema) {
-  //    avscOut write schema.toString(true).getBytes()
-  //    avscOut close()
-  //  }
 
   private def convertXML(avscFile: Path,
                          split: String,
@@ -71,11 +58,6 @@ class Converter(val config: Config) {
                          validationSchema: Path) {
     val schema = new Schema.Parser().parse(avscFile.jfile)
     val startTime = Calendar.getInstance().getTimeInMillis
-    //    val datumBuilder =
-    //      new DatumBuilder(schema, split, skipMissing, if (validationSchema != null) validationSchema.jfile else null)
-    //                val datums: util.ArrayList[AnyRef] = datumBuilder.createDatum(xmlIn)
-    //            val datums: util.List[Any]= new DatumFixer(schema,xmlIn,Option(split),true).datums.asJava
-
     val datums = new AvroBuilder(schema, split, true).createDatums(xmlIn)
     val endTime = Calendar.getInstance().getTimeInMillis
     System.err.println("Time taken: " + (endTime - startTime))
@@ -96,7 +78,7 @@ class Converter(val config: Config) {
   }
 
   private class BaseDirResolver(val baseDir: Path)
-    extends SchemaBuilder.Resolver {
+    extends OldSchemaBuilder.Resolver {
     // Change Working directory to the base directory
     System.setProperty("user.dir", baseDir.toAbsolute.path)
 

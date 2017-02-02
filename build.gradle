@@ -10,11 +10,6 @@ description = "A simple tool to convert xml to avro and their respective schemas
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-//ScalaCompileOptions.metaClass.daemonServer = true
-//ScalaCompileOptions.metaClass.fork = true
-//ScalaCompileOptions.metaClass.useAnt = false
-//ScalaCompileOptions.metaClass.useCompileDaemon = false
-
 repositories {
     maven { url "http://repo.maven.apache.org/maven2" }
 }

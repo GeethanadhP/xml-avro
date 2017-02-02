@@ -469,7 +469,7 @@ public class ConverterTest {
 
     @Test
     public void SchemaBuilder_validName() {
-        SchemaBuilder builder = new SchemaBuilder();
+        OldSchemaBuilder builder = new OldSchemaBuilder();
 
         assertNull(builder.validName(null));
         assertEquals("", builder.validName(""));
