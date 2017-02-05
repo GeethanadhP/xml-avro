@@ -42,17 +42,6 @@ class ArgParse(args: Seq[String]) {
     } else None
   }
 
-  def toggle(name: String, short: Char): Option[Boolean] = {
-    if (argsMap.contains(name) || argsMap.contains(short + "")) {
-      val key = if (argsMap contains name) name else short + ""
-      val values = argsMap(key)
-      if (values.nonEmpty)
-        throw new IllegalArgumentException(s"Too many values provided for $key")
-      else
-        Some(true)
-    } else None
-  }
-
   private def value[T: TypeTag](original: List[String]): T = {
     typeOf[T] match {
       case t if t =:= typeOf[String] => original.fetch().asInstanceOf[T]
@@ -67,6 +56,17 @@ class ArgParse(args: Seq[String]) {
       case t if t =:= typeOf[List[Path]] => original.validate().map(value => Path(value)).asInstanceOf[T]
       case other => throw new IllegalArgumentException(s"Type $other is not yet supported")
     }
+  }
+
+  def toggle(name: String, short: Char): Option[Boolean] = {
+    if (argsMap.contains(name) || argsMap.contains(short + "")) {
+      val key = if (argsMap contains name) name else short + ""
+      val values = argsMap(key)
+      if (values.nonEmpty)
+        throw new IllegalArgumentException(s"Too many values provided for $key")
+      else
+        Some(true)
+    } else None
   }
 
   implicit class MyList[String](list: List[String]) {
