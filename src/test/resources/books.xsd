@@ -1,4 +1,6 @@
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:bks="urn:books" targetNamespace="urn:books">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:bks="urn:main" xmlns:books="http://www.books.com/XML"
+            targetNamespace="urn:main">
+    <xsd:import namespace="http://www.books.com/XML" schemaLocation="books1.xsd"/>
     <xsd:element name="books" type="bks:BooksForm"/>
     <xsd:complexType name="BooksForm">
         <xsd:sequence>
@@ -7,6 +9,7 @@
     </xsd:complexType>
     <xsd:complexType name="BookForm">
         <xsd:sequence>
+            <xsd:element ref="books:author"/>
             <xsd:element name="author" type="xsd:string"/>
             <xsd:element name="title" type="xsd:string"/>
             <xsd:element name="genre" type="xsd:string"/>

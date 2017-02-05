@@ -1,20 +1,15 @@
 package in.dreamlabs.xmlavro
 
-import java.util.Objects
-
+import in.dreamlabs.xmlavro.Utils.option
 import org.apache.xerces.xni.XNIException
 import org.apache.xerces.xni.parser.{XMLErrorHandler, XMLParseException}
+import org.apache.xerces.xs.XSObject
 import org.w3c.dom.{DOMError, DOMErrorHandler}
 
 /**
   * Created by Royce on 20/01/2017.
   */
-case class XSDException(message: String = null, cause: Throwable = null)
-  extends RuntimeException(message, cause) {
-  def this(cause: Throwable) = this(null, cause)
-}
-
-case class XMLException(message: String = null, cause: Throwable = null)
+case class ConversionError(message: String = null, cause: Throwable = null)
   extends RuntimeException(message, cause) {
   def this(cause: Throwable) = this(null, cause)
 }
@@ -45,42 +40,46 @@ class ErrorHandler extends XMLErrorHandler with DOMErrorHandler {
   }
 
   def check(): Unit = {
-    if (exception isDefined) throw new XSDException(exception.get)
+    if (exception isDefined) throw new ConversionError(exception.get)
     if (error isDefined) {
       error.get.getRelatedException match {
-        case cause: Throwable => throw new XSDException(cause)
+        case cause: Throwable => throw new ConversionError(cause)
         case _ =>
       }
       val locator = error.get.getLocation
       val location = "at:" + locator.getUri + ", line:" + locator.getLineNumber + ", char:" + locator.getColumnNumber
-      throw XSDException(location + " " + error.get.getMessage)
+      throw ConversionError(location + " " + error.get.getMessage)
     }
   }
 }
 
-object Source {
-  def apply(name: String, attribute: Boolean = false) = new Source(name, attribute)
+case class XNode(name: String,
+                 nsURI: String,
+                 nsName: String,
+                 attribute: Boolean) {
+  val element: Boolean = !attribute
 
+  def source: String =
+    (if (attribute) "attribute" else "element") + s" $fullName"
+
+  def fullName: String =
+    s"${if (option(nsURI) isDefined) nsURI + ":" else ""}$name"
+
+  override def toString: String =
+    s"${if (option(nsName) isDefined) nsName + ":" else ""}$name"
+}
+
+object XNode {
   val SOURCE = "source"
   val DOCUMENT = "document"
   val WILDCARD = "others"
   val TEXT_VALUE = "text_value"
-}
+  var namespaces = true
 
-class Source(val name: String, val attribute: Boolean) {
+  def apply(ele: XSObject, attribute: Boolean = false): XNode =
+    new XNode(ele.getName, ele.getNamespace, null, attribute)
 
-  def isElement: Boolean = !isAttribute
+  def textNode: XNode = new XNode(TEXT_VALUE, null, null, attribute = false)
 
-  def isAttribute: Boolean = attribute
-
-  override def hashCode: Int = Objects.hash(name, attribute.asInstanceOf[Object])
-
-  override def toString: String =
-    (if (attribute) "attribute" else "element") + " " + name
-
-  override def equals(obj: Any): Boolean = {
-    if (!obj.isInstanceOf[Source]) return false
-    val source = obj.asInstanceOf[Source]
-    name == source.name && attribute == source.attribute
-  }
+  def wildNode(attribute: Boolean): XNode = new XNode(WILDCARD, null, null, attribute)
 }

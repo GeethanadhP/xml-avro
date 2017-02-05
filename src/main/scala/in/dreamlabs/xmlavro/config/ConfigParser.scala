@@ -1,5 +1,6 @@
 package in.dreamlabs.xmlavro.config
 
+import in.dreamlabs.xmlavro.Utils
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -20,7 +21,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
   }
 
   processArgs()
-  config.finish()
+  config.validate()
 
   private def processArgs(): Unit = {
     val debug = toggle("debug", 'd')
@@ -68,13 +69,15 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
       if (splitBy isDefined) tempConfig.splitBy = splitBy.get
       if (ignoreMissing isDefined) tempConfig.ignoreMissing = ignoreMissing.get
       if (validateSchema isDefined)
-        tempConfig.validationXSD = validateSchema.get
+        tempConfig.validationXSD = validateSchema
     }
   }
 
   private def fetchConfig(configFile: Path): Config = {
+    Utils.startTimer("Loading YML")
     val configReader = configFile.toFile.bufferedReader()
     val obj = new Yaml(new Constructor(classOf[Config])) load configReader
+    Utils.endTimer("Loading YML")
     obj.asInstanceOf[Config]
   }
 }

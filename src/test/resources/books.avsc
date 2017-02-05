@@ -1,132 +1,145 @@
 {
   "type" : "record",
-  "name" : "BooksForm",
+  "name" : "type2",
   "fields" : [ {
-    "name" : "book",
-    "type" : {
-      "type" : "array",
-      "items" : {
-        "type" : "record",
-        "name" : "BookForm",
-        "fields" : [ {
-          "name" : "id",
-          "type" : [ "null", "string" ],
-          "source" : "attribute id"
-        }, {
-          "name" : "others",
-          "type" : {
-            "type" : "map",
-            "values" : "string"
-          }
-        }, {
-          "name" : "author",
-          "type" : "string",
-          "source" : "element author"
-        }, {
-          "name" : "title",
-          "type" : "string",
-          "source" : "element title"
-        }, {
-          "name" : "genre",
-          "type" : "string",
-          "source" : "element genre"
-        }, {
-          "name" : "price",
-          "type" : [ "null", {
-            "type" : "array",
-            "items" : {
-              "type" : "record",
-              "name" : "PriceType",
-              "fields" : [ {
-                "name" : "currency",
-                "type" : [ "null", "string" ],
-                "source" : "attribute currency"
-              }, {
-                "name" : "text_value",
-                "type" : [ "null", "double" ],
-                "source" : "element text_value"
-              } ]
-            }
-          } ],
-          "source" : "element price"
-        }, {
-          "name" : "pub_date",
-          "type" : [ "null", "long" ],
-          "source" : "element pub_date",
-          "comment" : "timestamp"
-        }, {
-          "name" : "review",
-          "type" : [ "null", {
-            "type" : "array",
-            "items" : {
-              "type" : "record",
-              "name" : "ReviewType",
-              "fields" : [ {
-                "name" : "title",
-                "type" : "string",
-                "source" : "element title"
-              }, {
-                "name" : "content",
-                "type" : [ "null", "string" ],
-                "source" : "element content"
-              } ]
-            }
-          } ],
-          "source" : "element review"
-        }, {
-          "name" : "type0",
-          "type" : {
-            "type" : "array",
-            "items" : {
-              "type" : "record",
-              "name" : "type1",
-              "fields" : [ {
-                "name" : "alias",
-                "type" : {
+    "name" : "books",
+    "type" : [ "null", {
+      "type" : "record",
+      "name" : "BooksForm",
+      "fields" : [ {
+        "name" : "book",
+        "type" : {
+          "type" : "array",
+          "items" : {
+            "type" : "record",
+            "name" : "BookForm",
+            "fields" : [ {
+              "name" : "id",
+              "type" : [ "null", "string" ],
+              "source" : "attribute id"
+            }, {
+              "name" : "others",
+              "type" : {
+                "type" : "map",
+                "values" : "string"
+              }
+            }, {
+              "name" : "author",
+              "type" : "string",
+              "source" : "element author"
+            }, {
+              "name" : "title",
+              "type" : "string",
+              "source" : "element title"
+            }, {
+              "name" : "genre",
+              "type" : "string",
+              "source" : "element genre"
+            }, {
+              "name" : "price",
+              "type" : [ "null", {
+                "type" : "array",
+                "items" : {
                   "type" : "record",
-                  "name" : "AliasType",
+                  "name" : "PriceType",
+                  "fields" : [ {
+                    "name" : "currency",
+                    "type" : [ "null", "string" ],
+                    "source" : "attribute currency"
+                  }, {
+                    "name" : "text_value",
+                    "type" : [ "null", "double" ],
+                    "source" : "element text_value"
+                  } ]
+                }
+              } ],
+              "source" : "element price"
+            }, {
+              "name" : "pub_date",
+              "type" : [ "null", "long" ],
+              "source" : "element pub_date",
+              "comment" : "timestamp"
+            }, {
+              "name" : "review",
+              "type" : [ "null", {
+                "type" : "array",
+                "items" : {
+                  "type" : "record",
+                  "name" : "ReviewType",
                   "fields" : [ {
                     "name" : "title",
                     "type" : "string",
                     "source" : "element title"
                   }, {
-                    "name" : "language",
-                    "type" : [ "null", {
-                      "type" : "array",
-                      "items" : "string"
-                    } ],
-                    "source" : "element language"
+                    "name" : "content",
+                    "type" : [ "null", "string" ],
+                    "source" : "element content"
                   } ]
-                },
-                "source" : "element alias"
-              }, {
-                "name" : "website",
-                "type" : {
+                }
+              } ],
+              "source" : "element review"
+            }, {
+              "name" : "type0",
+              "type" : {
+                "type" : "array",
+                "items" : {
                   "type" : "record",
-                  "name" : "WebsiteType",
+                  "name" : "type1",
                   "fields" : [ {
-                    "name" : "url",
-                    "type" : [ "null", {
-                      "type" : "array",
-                      "items" : "string"
-                    } ],
-                    "source" : "element url"
+                    "name" : "alias",
+                    "type" : {
+                      "type" : "record",
+                      "name" : "AliasType",
+                      "fields" : [ {
+                        "name" : "title",
+                        "type" : "string",
+                        "source" : "element title"
+                      }, {
+                        "name" : "language",
+                        "type" : [ "null", {
+                          "type" : "array",
+                          "items" : "string"
+                        } ],
+                        "source" : "element language"
+                      } ]
+                    },
+                    "source" : "element alias"
+                  }, {
+                    "name" : "website",
+                    "type" : {
+                      "type" : "record",
+                      "name" : "WebsiteType",
+                      "fields" : [ {
+                        "name" : "url",
+                        "type" : [ "null", {
+                          "type" : "array",
+                          "items" : "string"
+                        } ],
+                        "source" : "element url"
+                      } ]
+                    },
+                    "source" : "element website"
                   } ]
-                },
-                "source" : "element website"
-              } ]
-            }
+                }
+              }
+            }, {
+              "name" : "sold",
+              "type" : [ "null", {
+                "type" : "array",
+                "items" : "string"
+              } ],
+              "source" : "element sold"
+            } ]
           }
-        }, {
-          "name" : "sold",
-          "type" : [ "null", {
-            "type" : "array",
-            "items" : "string"
-          } ],
-          "source" : "element sold"
-        } ]
-      }
-    },
-    "source" : "element book"
-  } ]
+        },
+        "source" : "element book"
+      } ]
+    } ],
+    "source" : "element {urn:main}:books"
+  }, {
+    "name" : "author",
+    "type" : [ "null", "string" ],
+    "source" : "element {http://www.books.com/XML}:author"
+  } ],
+  "source" : "document"
 }

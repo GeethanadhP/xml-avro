@@ -1,6 +1,6 @@
 dynamic: true
 dynamicSource: ENVIRONMENT
-debug: false
+debug: true
 baseDir: "src/test/resources"
 namespaces: true
 XSD:
