@@ -22,18 +22,9 @@ import scala.collection.mutable
 class AvroBuilder(config: XMLConfig) {
   private val splits = config.split
   private val validationXSD = config.validationXSD
-  private val caseSensitive = config.caseSensitive
+  RichAvro.caseSensitive = config.caseSensitive
   RichAvro.ignoreMissing = config.ignoreMissing
   XNode.namespaces = config.namespaces
-
-  //  def createDatums(): util.List[AnyRef] = {
-  //    val xmlIn = if (config.streamingInput) System.in else config.xmlFile.toFile.bufferedInput()
-  //    val reader: XMLEventReader =
-  //      XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
-  //    val datums = new util.ArrayList[AnyRef]()
-  //    datums.add(getDatums(reader))
-  //    datums
-  //  }
 
   def createDatums(): Unit = {
     val xmlIn =
@@ -139,6 +130,7 @@ class AvroBuilder(config: XMLConfig) {
         Some(event.asStartElement())
       else
         None
+
     private val endEle: Option[EndElement] =
       if (event isEndElement)
         Some(event.asEndElement())
@@ -166,8 +158,10 @@ class AvroBuilder(config: XMLConfig) {
 
     def hasAttributes: Boolean = attributes nonEmpty
 
-    def push(): Boolean =
-      addElement(XNode(name, nsURI, nsName, attribute = false))
+    def push(): Boolean = {
+      if (eleStack.isEmpty) addElement(XNode(name, nsURI, nsName, attribute = false))
+      else addElement(XNode(element, name, nsURI, nsName, attribute = false))
+    }
 
     private def nsURI: String =
       if (startEle isDefined) startEle.get.getName.getNamespaceURI

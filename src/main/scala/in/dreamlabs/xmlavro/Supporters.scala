@@ -57,13 +57,28 @@ case class XNode(name: String,
                  nsURI: String,
                  nsName: String,
                  attribute: Boolean) {
+  var parentNS: String = _
   val element: Boolean = !attribute
 
-  def source: String =
-    (if (attribute) "attribute" else "element") + s" $fullName"
+  def sourceMatches(sourceTag: String, caseSensitive: Boolean): Boolean = {
+    val matches = if (caseSensitive) source == sourceTag || otherSource == sourceTag
+    else
+      source.equalsIgnoreCase(sourceTag) || otherSource.equalsIgnoreCase(
+        sourceTag)
+    matches
+  }
 
-  def fullName: String =
-    s"${if (option(nsURI) isDefined) nsURI + ":" else ""}$name"
+  def source: String =
+    (if (attribute) "attribute" else "element") + s" ${fullName()}"
+
+  def otherSource: String =
+    (if (attribute) "attribute" else "element") + s" ${fullName(other = true)}"
+
+  def fullName(other: Boolean = false): String =
+    if (other)
+      s"${if (option(parentNS) isDefined) parentNS + ":" else ""}$name"
+    else
+      s"${if (option(nsURI) isDefined) nsURI + ":" else ""}$name"
 
   override def toString: String =
     s"${if (option(nsName) isDefined) nsName + ":" else ""}$name"
@@ -79,7 +94,20 @@ object XNode {
   def apply(ele: XSObject, attribute: Boolean = false): XNode =
     new XNode(ele.getName, ele.getNamespace, null, attribute)
 
+  def apply(parentNode: XNode,
+            name: String,
+            nsURI: String,
+            nsName: String,
+            attribute: Boolean): XNode = {
+    val node = new XNode(name, nsURI, nsName, attribute)
+    if (option(nsURI) isEmpty)
+      if (option(parentNode.nsURI) isDefined) node.parentNS = parentNode.nsURI
+      else node.parentNS = parentNode.parentNS
+    node
+  }
+
   def textNode: XNode = new XNode(TEXT_VALUE, null, null, attribute = false)
 
-  def wildNode(attribute: Boolean): XNode = new XNode(WILDCARD, null, null, attribute)
+  def wildNode(attribute: Boolean): XNode =
+    new XNode(WILDCARD, null, null, attribute)
 }

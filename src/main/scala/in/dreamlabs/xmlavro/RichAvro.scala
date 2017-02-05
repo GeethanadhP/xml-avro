@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.util
 
-import in.dreamlabs.xmlavro.RichAvro.ignoreMissing
+import in.dreamlabs.xmlavro.RichAvro.{caseSensitive, ignoreMissing}
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type._
 import org.apache.avro.Schema.{Field, Type}
@@ -83,7 +83,8 @@ trait RichAvro {
             }
             array.add(AvroUtils.createValue(field arrayItemType, value))
           } else
-            record.put(field name, AvroUtils.createValue(field fieldType, value))
+            record.put(field name,
+              AvroUtils.createValue(field fieldType, value))
         }
       }
     }
@@ -100,7 +101,8 @@ trait RichAvro {
       var resultField: Option[Field] = None
       breakable {
         schema.simplify.getFields.forEach { field =>
-          if (node.source == field.getProp(XNode.SOURCE)) {
+          val sourceField = field.getProp(XNode.SOURCE)
+          if (node sourceMatches(sourceField, caseSensitive)) {
             resultField = Some(field)
             break
           }
@@ -179,4 +181,5 @@ trait RichAvro {
 
 object RichAvro extends RichAvro {
   var ignoreMissing = false
+  var caseSensitive = true
 }
