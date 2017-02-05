@@ -1,18 +1,15 @@
 package in.dreamlabs.xmlavro
 
-import java.util
-import java.util.TimeZone
+import java.util.{Calendar, TimeZone}
 import javax.xml.bind.DatatypeConverter
 
 import in.dreamlabs.xmlavro.AvroPath.countsMap
-import in.dreamlabs.xmlavro.Implicits.RichRecord
+import in.dreamlabs.xmlavro.RichAvro._
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type._
 import org.apache.avro.Schema.{Field, Type}
-import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericData.Record
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
@@ -20,49 +17,59 @@ import scala.util.control.Breaks._
 /**
   * Created by Royce on 28/01/2017.
   */
-class AvroPath(val name: String, val pathType: Type, currentPath: ListBuffer[AvroPath], val virtual: Boolean = false) {
-  private val innerName = StringBuilder.newBuilder
-  innerName append s"$name"
-  currentPath.foreach(path => innerName append path.toString.replace(path name, ""))
+class AvroPath(val name: String,
+               val pathType: Type,
+               currentPath: ListBuffer[AvroPath],
+               val virtual: Boolean = false) {
+
+  private val innerName = {
+    val builder = StringBuilder.newBuilder
+    builder append s"$name"
+    currentPath.foreach(path =>
+      builder append path.toString.replace(path name, ""))
+    builder.mkString
+  }
+
   val index: Int =
-    if (countsMap contains innerName.mkString) {
-      var currentIndex = countsMap(innerName.mkString)
+    if (countsMap contains innerName) {
+      var currentIndex = countsMap(innerName)
       currentIndex += 1
-      countsMap += (innerName.mkString -> currentIndex)
+      countsMap += (innerName -> currentIndex)
       currentIndex
-    }
-    else {
-      countsMap += (innerName.mkString -> 0)
+    } else {
+      countsMap += (innerName -> 0)
       0
     }
 
   def destroy(): Unit = {
-    var currentIndex = countsMap(innerName.mkString)
+    var currentIndex = countsMap(innerName)
     currentIndex -= 1
-    countsMap += (innerName.mkString -> currentIndex)
+    countsMap += (innerName -> currentIndex)
   }
 
-  override def toString: String = if (pathType == ARRAY) s"$name[$index]" else name
+  override def toString: String =
+    if (pathType == ARRAY) s"$name[$index]" else name
 }
-
 
 object AvroPath {
-  def apply(name: String, pathType: Type, currentPath: ListBuffer[AvroPath], virtual: Boolean = false) = new AvroPath(name, pathType, currentPath, virtual)
-
   val countsMap: mutable.Map[String, Int] = mutable.Map[String, Int]()
 
-}
+  def apply(name: String,
+            pathType: Type,
+            currentPath: ListBuffer[AvroPath],
+            virtual: Boolean = false) =
+    new AvroPath(name, pathType, currentPath, virtual)
 
+}
 
 object XMLEvents {
   val PRIMITIVES: List[Type] =
     List(STRING, INT, LONG, FLOAT, DOUBLE, BOOLEAN, NULL)
-
+  val eleStack: ListBuffer[XNode] = ListBuffer[XNode]()
+  val schemaPath: ListBuffer[AvroPath] = ListBuffer[AvroPath]()
   var rootSchema: Schema = _
   var rootRecord: Record = _
   private var lastSchema = rootSchema
-  val eleStack: ListBuffer[String] = ListBuffer[String]()
-  val schemaPath: ListBuffer[AvroPath] = ListBuffer[AvroPath]()
 
   def setSchema(schema: Schema, record: Record): Unit = {
     rootSchema = schema
@@ -70,22 +77,40 @@ object XMLEvents {
     lastSchema = rootSchema
   }
 
-  def addElement(name: String): Boolean = {
-    eleStack.insert(0, name)
+  def addElement(node: XNode): Boolean = {
+    eleStack.insert(0, node)
     var found = false
     if (eleStack.size != 1) {
-      val (field, path, schema) = findField(lastSchema, name)
-      if (field != null) {
+      val (field, path, schema) = searchField(lastSchema, node)
+      if (field isDefined) {
         schemaPath ++= path.reverse
-        updatePath(field)
+        updatePath(field.get)
         found = true
       } else {
         val builder = StringBuilder.newBuilder
         eleStack.reverse.foreach(ele => builder append s"$ele/")
-        System.err.println(s"WARNING: Element ${builder mkString} is not found in Schema")
+        System.err.println(
+          s"WARNING: Element ${builder.stripSuffix("/")} is not found in Schema")
       }
     } else found = true
     found
+  }
+
+  def removeElement(node: XNode): Unit = {
+    eleStack.remove(0)
+    var count = schemaPath.size
+    if (count != 0) {
+      if (schemaPath.last.name == node.name) {
+        count = destroyLastPath()
+        while (count != 0 && schemaPath.last.virtual) {
+          count = destroyLastPath()
+        }
+      } else if (schemaPath.last.name.startsWith("type"))
+        while (count != 0 && schemaPath.last.virtual) {
+          count = destroyLastPath()
+        }
+      lastSchema = rootRecord.at(schemaPath.toList).getSchema
+    }
   }
 
   private def destroyLastPath(): Int = {
@@ -95,82 +120,65 @@ object XMLEvents {
     schemaPath size
   }
 
-  def removeElement(name: String): Unit = {
-    eleStack.remove(0)
-    var count = schemaPath.size
-    if (count != 0) {
-      if (schemaPath.last.name == name) {
-        count = destroyLastPath()
-        while (count != 0 && schemaPath.last.virtual) {
-          count = destroyLastPath()
-        }
-      }
-      else if (schemaPath.last.name.startsWith("type"))
-        while (count != 0 && schemaPath.last.virtual) {
-          count = destroyLastPath()
-        }
-      lastSchema = rootRecord.at(schemaPath.toList).getSchema
-    }
-  }
-
-  def findField(schema: Schema, name: String): (Field, ListBuffer[AvroPath], Schema) = {
-    var fieldSchema = AvroUtils.getSchema(schema)
-    var field = fieldSchema.getField(name)
+  def searchField(
+      schema: Schema,
+      node: XNode): (Option[Field], ListBuffer[AvroPath], Schema) = {
+    var fieldSchema = schema.simplify
+    var field = schema.field(node)
     val path = ListBuffer[AvroPath]()
-    if (field == null)
+    if (field isEmpty)
       breakable {
-        for (typeField <- fieldSchema.getFields.asScala) {
-          if (typeField name() startsWith "type") {
-            val (resultField, resultPath, resultSchema) = findField(AvroUtils.getSchema(typeField), name)
-            if (resultField != null) {
-              val (tempPath, tempSchema) = getPath(typeField, virtual = true)
-              resultPath ++= tempPath
-              path ++= resultPath
-              field = resultField
-              fieldSchema = resultSchema
-              break
-            }
+        for (typeField <- fieldSchema.customTypeFields()) {
+          val (resultField, resultPath, resultSchema) =
+            searchField(typeField.fieldSchema, node)
+          if (resultField isDefined) {
+            val (tempPath, tempSchema) = getPath(typeField, virtual = true)
+            resultPath ++= tempPath
+            path ++= resultPath
+            field = resultField
+            fieldSchema = resultSchema
+            break
           }
         }
       }
     (field, path, fieldSchema)
   }
 
-  def getPath(field: Field, virtual: Boolean = false): (ListBuffer[AvroPath], Schema) = {
-    var fieldSchema = AvroUtils.getSchema(field)
+  def getPath(field: Field,
+              virtual: Boolean = false): (ListBuffer[AvroPath], Schema) = {
     val path = ListBuffer[AvroPath]()
-    val name = field name()
-    fieldSchema getType match {
-      case ARRAY =>
-        val itemType = fieldSchema getElementType()
-        if (itemType.getType == RECORD) {
-          path += AvroPath(name, ARRAY, schemaPath ++ path.reverse, virtual)
-          fieldSchema = itemType
-        } else if (!PRIMITIVES.contains(itemType.getType))
-          System.err.println(s"WARNING: 1 - Unknown type $itemType for $name")
-      case RECORD =>
-        path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
-      case other => if (!PRIMITIVES.contains(other)) System.err.println(s"WARNING: 2 - Unknown type $other for $name")
+    val name = field name ()
+    if (field isArray) {
+      if (field.arrayItemType == RECORD) {
+        path += AvroPath(name, ARRAY, schemaPath ++ path.reverse, virtual)
+        return (path, field arraySchema)
+      } else if (!field.isPrimitiveArray)
+        System.err.println(
+          s"WARNING: 1 - Unknown type ${field arraySchema} for $name")
+    } else if (field isRecord) {
+      path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
+    } else if (!field.isPrimitive) {
+      System.err.println(
+        s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
     }
-    (path, fieldSchema)
+    (path, field fieldSchema)
   }
 
   def updatePath(field: Field, virtual: Boolean = false): Unit = {
-    val fieldSchema = AvroUtils.getSchema(field)
-    val name = field name()
-    fieldSchema getType match {
-      case ARRAY =>
-        val itemType = fieldSchema getElementType()
-        if (itemType.getType == RECORD) {
-          schemaPath += AvroPath(name, ARRAY, schemaPath, virtual)
-          lastSchema = itemType
-        } else if (!PRIMITIVES.contains(itemType.getType))
-          System.err.println(s"WARNING: 1 - Unknown type $itemType for $name")
-      case RECORD =>
-        schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
-        lastSchema = fieldSchema
-      case other => if (!PRIMITIVES.contains(other)) System.err.println(s"WARNING: 2 - Unknown type $other for $name")
-    }
+    val name = field name ()
+    if (field isArray) {
+      if (field.arrayItemType == RECORD) {
+        schemaPath += AvroPath(name, ARRAY, schemaPath, virtual)
+        lastSchema = field.arraySchema
+      } else if (!field.isPrimitiveArray)
+        System.err.println(
+          s"WARNING: 1 - Unknown type ${field.arraySchema} for $name")
+    } else if (field isRecord) {
+      schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
+      lastSchema = field.fieldSchema
+    } else if (!field.isPrimitive)
+      System.err.println(
+        s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
   }
 
 }
@@ -180,38 +188,6 @@ object AvroUtils {
     "^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*)Z?$"
 
   var timeZone: TimeZone = TimeZone.getTimeZone("UTC-0")
-
-  def getSchema(field: Field): Schema = {
-    var fieldSchema = field schema()
-    if (fieldSchema.getType == UNION)
-      fieldSchema = fieldSchema.getTypes.get(1)
-    fieldSchema
-  }
-
-  def getSchema(schema: Schema): Schema = {
-    schema getType match {
-      case UNION => schema.getTypes.get(1)
-      case ARRAY =>
-        val itemType = schema getElementType()
-        if (itemType.getType == UNION)
-          itemType.getTypes.get(1)
-        else
-          itemType
-      case other => schema
-    }
-  }
-
-  def createRecord(schema: Schema): Record = {
-    val record = new GenericData.Record(schema)
-    import scala.collection.JavaConverters._
-    for (field <- record.getSchema.getFields.asScala) {
-      if (field.schema().getType == ARRAY)
-        record.put(field.name, new util.ArrayList[AnyRef]())
-      if (field.name == Source.WILDCARD)
-        record.put(field.name, new util.HashMap[String, AnyRef]())
-    }
-    record
-  }
 
   def createValue(nodeType: Type, content: String): AnyRef = {
     val result = nodeType match {
@@ -223,7 +199,7 @@ object AvroUtils {
       case FLOAT => content.toFloat
       case DOUBLE => content.toDouble
       case STRING => content
-      case other => throw XMLException(s"Unsupported type $other")
+      case other => throw ConversionError(s"Unsupported type $other")
     }
     result.asInstanceOf[AnyRef]
   }
@@ -243,11 +219,22 @@ object AvroUtils {
   }
 }
 
+object Utils {
+  private val timeMap = mutable.Map[String, Long]()
 
-object Utils{
   def option(text: String): Option[String] = {
     if (Option(text) isDefined)
       if (text.trim == "") None else Option(text)
     else None
+  }
+
+  def startTimer(tag: String): Unit =
+    timeMap += tag -> Calendar.getInstance().getTimeInMillis
+
+  def endTimer(tag: String): Unit = {
+    val endTime = Calendar.getInstance().getTimeInMillis
+    val startTime = timeMap(tag)
+    System.err.println(s"$tag took: ${endTime - startTime} seconds")
+    timeMap.remove(tag)
   }
 }
