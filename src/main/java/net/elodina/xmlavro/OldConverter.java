@@ -28,19 +28,19 @@ import java.util.List;
 
 public class OldConverter {
     public static Schema createSchema(String xsd) {
-        return new SchemaBuilder().createSchema(xsd);
+        return new OldSchemaBuilder().createSchema(xsd);
     }
 
     public static Schema createSchema(File file) {
-        return new SchemaBuilder().createSchema(file);
+        return new OldSchemaBuilder().createSchema(file);
     }
 
     public static Schema createSchema(Reader reader) {
-        return new SchemaBuilder().createSchema(reader);
+        return new OldSchemaBuilder().createSchema(reader);
     }
 
     public static Schema createSchema(InputStream stream) {
-        return new SchemaBuilder().createSchema(stream);
+        return new OldSchemaBuilder().createSchema(stream);
     }
 
     public static <T> T createDatum(Schema schema, File file) {
@@ -76,7 +76,7 @@ public class OldConverter {
                     + opts.avroFile);
         }
 
-        SchemaBuilder schemaBuilder = new SchemaBuilder();
+        OldSchemaBuilder schemaBuilder = new OldSchemaBuilder();
         schemaBuilder.setDebug(opts.debug);
         if (opts.baseDir != null) {
             schemaBuilder.setResolver(new BaseDirResolver(opts.baseDir));
@@ -210,7 +210,7 @@ public class OldConverter {
         }
     }
 
-    private static class BaseDirResolver implements SchemaBuilder.Resolver {
+    private static class BaseDirResolver implements OldSchemaBuilder.Resolver {
         private File baseDir;
 
         private BaseDirResolver(File baseDir) {

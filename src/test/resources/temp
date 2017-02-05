@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><mns:MnSDocument xmlns:mns="http://www.nrf-arts.org/IXRetail/namespace/" xmlns:pcms="http://www.pcmsgroup.com/XML">
+    <mns:Header><MessageId>CY_NAV_00211</MessageId>
+        <CorrelationId>CY_20150901145144</CorrelationId>
+        <CreatedTimestamp>2015-09-01T14:51:44+02:00</CreatedTimestamp>
+        <SourceApplicationName>CY_NAV</SourceApplicationName>
+        <InterfaceId>I2029</InterfaceId>
+        <InterfaceName>International Basket Level Sales</InterfaceName>
+        <PayloadName>POSLog</PayloadName>
+        <BatchMessageCount>1</BatchMessageCount>
+        <BatchRecordCount>1</BatchRecordCount>
+        <BatchRecordSum>54.00</BatchRecordSum>
+    </mns:Header>
+    <mns:Payload><mns:POSLog><Transaction><BusinessUnit><UnitID TypeCode="RetailStore">9482</UnitID>
+        <Address><AddressLine>AKROPOLIS</AddressLine>
+            <Country Code="CY" />
+        </Address>
+    </BusinessUnit>
+        <BusinessUnit><UnitID TypeCode="  AdministrationCenter" />
+        </BusinessUnit>
+        <WorkstationID>19</WorkstationID>
+        <SequenceNumber>34</SequenceNumber>
+        <EndDateTime>2015-08-27T20:07:22+02:00</EndDateTime>
+        <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+        <BusinessDayDate>2015-08-27</BusinessDayDate>
+        <OperatorID>101</OperatorID>
+        <CurrencyCode>EUR</CurrencyCode>
+        <ReceiptNumber>000000012</ReceiptNumber>
+        <RetailTransaction TransactionStatus="Finished" Version="2.2"><LineItem><SequenceNumber>0</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Return ItemType="Stock"><ItemID>20318178</ItemID>
+                <MerchandiseHierarchy Level="5">T17/NU</MerchandiseHierarchy>
+                <POSIdentity POSIDType="PLU"><POSItemID>20318178</POSItemID>
+                </POSIdentity>
+                <RegularSalesUnitPrice>30.00</RegularSalesUnitPrice>
+                <ActualSalesUnitPrice>27.00</ActualSalesUnitPrice>
+                <ExtendedAmount>54.00</ExtendedAmount>
+                <Quantity>2.00000</Quantity>
+                <RetailPriceModifier MethodCode="PriceOverride"><SequenceNumber>0</SequenceNumber>
+                    <Amount Action="Subtract">6.00</Amount>
+                    <PriceDerivationRule AccountingType="Discount" Method="ByPercentage" AssignmentBasis="Item"><PriceDerivationRuleID>1</PriceDerivationRuleID>
+                        <Percent Action="Subtract">10.00000</Percent>
+                    </PriceDerivationRule>
+                    <ReasonCode>13:5</ReasonCode>
+                    <pcms:PCMSRetailPriceModifier><pcms:DetailDiscountNumber>1</pcms:DetailDiscountNumber>
+                        <pcms:DetailDiscountNumber>2</pcms:DetailDiscountNumber>
+                        <pcms:DiscountableAmount>60.00</pcms:DiscountableAmount>
+                        <pcms:Quantity>2.00000</pcms:Quantity>
+                    </pcms:PCMSRetailPriceModifier>
+                </RetailPriceModifier>
+                <Tax><SequenceNumber>0</SequenceNumber>
+                    <TaxableAmount>54.00</TaxableAmount>
+                    <Amount>8.62</Amount>
+                    <Percent>19.00000</Percent>
+                    <TaxRuleID>S</TaxRuleID>
+                    <TaxGroupID>CYS</TaxGroupID>
+                    <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                    </pcms:PCMSTax>
+                </Tax>
+                <pcms:PCMSReturn><pcms:ExtendedAmountAllDiscounts>54.00</pcms:ExtendedAmountAllDiscounts>
+                    <pcms:ExtendedAmountExclStaffDiscount>54.00</pcms:ExtendedAmountExclStaffDiscount>
+                    <pcms:ItemReduced>False</pcms:ItemReduced>
+                    <pcms:ItemStatus>1</pcms:ItemStatus>
+                    <pcms:LinkedItemLevel>0</pcms:LinkedItemLevel>
+                    <pcms:ReasonCode>11:3</pcms:ReasonCode>
+                    <pcms:StockCategory>2607</pcms:StockCategory>
+                    <pcms:StockCondition>2801</pcms:StockCondition>
+                </pcms:PCMSReturn>
+            </Return>
+        </LineItem>
+            <LineItem><SequenceNumber>1</SequenceNumber>
+                <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+                <Tax><SequenceNumber>1</SequenceNumber>
+                    <TaxableAmount>54.00</TaxableAmount>
+                    <Amount>8.62</Amount>
+                    <Percent>19.00000</Percent>
+                    <TaxRuleID>S</TaxRuleID>
+                    <TaxGroupID>CYS</TaxGroupID>
+                    <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                    </pcms:PCMSTax>
+                </Tax>
+            </LineItem>
+            <LineItem><SequenceNumber>2</SequenceNumber>
+                <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+                <Tender TenderType="GiftCertificate" TypeCode="Refund"><TenderID>138</TenderID>
+                    <Amount>54.00</Amount>
+                    <pcms:PCMSTender><pcms:MediaType>15</pcms:MediaType>
+                    </pcms:PCMSTender>
+                </Tender>
+            </LineItem>
+            <Total TotalType="TransactionGrandAmount" pcms:NegativeValue="True">54.00</Total>
+            <Total TotalType="TransactionNetAmount" pcms:NegativeValue="True">45.38</Total>
+            <Total TotalType="TransactionTaxAmount" pcms:NegativeValue="True">8.62</Total>
+        </RetailTransaction>
+        <pcms:PCMSTransaction><OperatorByPassApproval><ApproverID />
+            <ApprovalDateTime>2015-08-27T20:07:06+02:00</ApprovalDateTime>
+        </OperatorByPassApproval>
+        </pcms:PCMSTransaction>
+    </Transaction>
+    </mns:POSLog>
+    </mns:Payload>
+</mns:MnSDocument>
+        <?xml version="1.0" encoding="UTF-8" standalone="no"?><mns:MnSDocument xmlns:mns="http://www.nrf-arts.org/IXRetail/namespace/" xmlns:pcms="http://www.pcmsgroup.com/XML">
+<mns:Header><MessageId>CY_NAV_00211</MessageId>
+    <CorrelationId>CY_20150901145144</CorrelationId>
+    <CreatedTimestamp>2015-09-01T14:51:44+02:00</CreatedTimestamp>
+    <SourceApplicationName>CY_NAV</SourceApplicationName>
+    <InterfaceId>I2029</InterfaceId>
+    <InterfaceName>International Basket Level Sales</InterfaceName>
+    <PayloadName>POSLog</PayloadName>
+    <BatchMessageCount>1</BatchMessageCount>
+    <BatchRecordCount>1</BatchRecordCount>
+    <BatchRecordSum>54.00</BatchRecordSum>
+</mns:Header>
+<mns:Payload><mns:POSLog><Transaction><BusinessUnit><UnitID TypeCode="RetailStore">9482</UnitID>
+    <Address><AddressLine>AKROPOLIS</AddressLine>
+        <Country Code="CY" />
+    </Address>
+</BusinessUnit>
+    <BusinessUnit><UnitID TypeCode="  AdministrationCenter" />
+    </BusinessUnit>
+    <WorkstationID>19</WorkstationID>
+    <SequenceNumber>34</SequenceNumber>
+    <EndDateTime>2015-08-27T20:07:22+02:00</EndDateTime>
+    <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+    <BusinessDayDate>2015-08-27</BusinessDayDate>
+    <OperatorID>101</OperatorID>
+    <CurrencyCode>EUR</CurrencyCode>
+    <ReceiptNumber>000000012</ReceiptNumber>
+    <RetailTransaction TransactionStatus="Finished" Version="2.2"><LineItem><SequenceNumber>0</SequenceNumber>
+        <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+        <Return ItemType="Stock"><ItemID>20318178</ItemID>
+            <MerchandiseHierarchy Level="5">T17/NU</MerchandiseHierarchy>
+            <POSIdentity POSIDType="PLU"><POSItemID>20318178</POSItemID>
+            </POSIdentity>
+            <RegularSalesUnitPrice>30.00</RegularSalesUnitPrice>
+            <ActualSalesUnitPrice>27.00</ActualSalesUnitPrice>
+            <ExtendedAmount>54.00</ExtendedAmount>
+            <Quantity>2.00000</Quantity>
+            <RetailPriceModifier MethodCode="PriceOverride"><SequenceNumber>0</SequenceNumber>
+                <Amount Action="Subtract">6.00</Amount>
+                <PriceDerivationRule AccountingType="Discount" Method="ByPercentage" AssignmentBasis="Item"><PriceDerivationRuleID>1</PriceDerivationRuleID>
+                    <Percent Action="Subtract">10.00000</Percent>
+                </PriceDerivationRule>
+                <ReasonCode>13:5</ReasonCode>
+                <pcms:PCMSRetailPriceModifier><pcms:DetailDiscountNumber>1</pcms:DetailDiscountNumber>
+                    <pcms:DetailDiscountNumber>2</pcms:DetailDiscountNumber>
+                    <pcms:DiscountableAmount>60.00</pcms:DiscountableAmount>
+                    <pcms:Quantity>2.00000</pcms:Quantity>
+                </pcms:PCMSRetailPriceModifier>
+            </RetailPriceModifier>
+            <Tax><SequenceNumber>0</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+            <pcms:PCMSReturn><pcms:ExtendedAmountAllDiscounts>54.00</pcms:ExtendedAmountAllDiscounts>
+                <pcms:ExtendedAmountExclStaffDiscount>54.00</pcms:ExtendedAmountExclStaffDiscount>
+                <pcms:ItemReduced>False</pcms:ItemReduced>
+                <pcms:ItemStatus>1</pcms:ItemStatus>
+                <pcms:LinkedItemLevel>0</pcms:LinkedItemLevel>
+                <pcms:ReasonCode>11:3</pcms:ReasonCode>
+                <pcms:StockCategory>2607</pcms:StockCategory>
+                <pcms:StockCondition>2801</pcms:StockCondition>
+            </pcms:PCMSReturn>
+        </Return>
+    </LineItem>
+        <LineItem><SequenceNumber>1</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tax><SequenceNumber>1</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+        </LineItem>
+        <LineItem><SequenceNumber>2</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tender TenderType="GiftCertificate" TypeCode="Refund"><TenderID>138</TenderID>
+                <Amount>54.00</Amount>
+                <pcms:PCMSTender><pcms:MediaType>15</pcms:MediaType>
+                </pcms:PCMSTender>
+            </Tender>
+        </LineItem>
+        <Total TotalType="TransactionGrandAmount" pcms:NegativeValue="True">54.00</Total>
+        <Total TotalType="TransactionNetAmount" pcms:NegativeValue="True">45.38</Total>
+        <Total TotalType="TransactionTaxAmount" pcms:NegativeValue="True">8.62</Total>
+    </RetailTransaction>
+    <pcms:PCMSTransaction><OperatorByPassApproval><ApproverID />
+        <ApprovalDateTime>2015-08-27T20:07:06+02:00</ApprovalDateTime>
+    </OperatorByPassApproval>
+    </pcms:PCMSTransaction>
+</Transaction>
+</mns:POSLog>
+</mns:Payload>
+</mns:MnSDocument>
+        <?xml version="1.0" encoding="UTF-8" standalone="no"?><mns:MnSDocument xmlns:mns="http://www.nrf-arts.org/IXRetail/namespace/" xmlns:pcms="http://www.pcmsgroup.com/XML">
+<mns:Header><MessageId>CY_NAV_00211</MessageId>
+    <CorrelationId>CY_20150901145144</CorrelationId>
+    <CreatedTimestamp>2015-09-01T14:51:44+02:00</CreatedTimestamp>
+    <SourceApplicationName>CY_NAV</SourceApplicationName>
+    <InterfaceId>I2029</InterfaceId>
+    <InterfaceName>International Basket Level Sales</InterfaceName>
+    <PayloadName>POSLog</PayloadName>
+    <BatchMessageCount>1</BatchMessageCount>
+    <BatchRecordCount>1</BatchRecordCount>
+    <BatchRecordSum>54.00</BatchRecordSum>
+</mns:Header>
+<mns:Payload><mns:POSLog><Transaction><BusinessUnit><UnitID TypeCode="RetailStore">9482</UnitID>
+    <Address><AddressLine>AKROPOLIS</AddressLine>
+        <Country Code="CY" />
+    </Address>
+</BusinessUnit>
+    <BusinessUnit><UnitID TypeCode="  AdministrationCenter" />
+    </BusinessUnit>
+    <WorkstationID>19</WorkstationID>
+    <SequenceNumber>34</SequenceNumber>
+    <EndDateTime>2015-08-27T20:07:22+02:00</EndDateTime>
+    <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+    <BusinessDayDate>2015-08-27</BusinessDayDate>
+    <OperatorID>101</OperatorID>
+    <CurrencyCode>EUR</CurrencyCode>
+    <ReceiptNumber>000000012</ReceiptNumber>
+    <RetailTransaction TransactionStatus="Finished" Version="2.2"><LineItem><SequenceNumber>0</SequenceNumber>
+        <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+        <Return ItemType="Stock"><ItemID>20318178</ItemID>
+            <MerchandiseHierarchy Level="5">T17/NU</MerchandiseHierarchy>
+            <POSIdentity POSIDType="PLU"><POSItemID>20318178</POSItemID>
+            </POSIdentity>
+            <RegularSalesUnitPrice>30.00</RegularSalesUnitPrice>
+            <ActualSalesUnitPrice>27.00</ActualSalesUnitPrice>
+            <ExtendedAmount>54.00</ExtendedAmount>
+            <Quantity>2.00000</Quantity>
+            <RetailPriceModifier MethodCode="PriceOverride"><SequenceNumber>0</SequenceNumber>
+                <Amount Action="Subtract">6.00</Amount>
+                <PriceDerivationRule AccountingType="Discount" Method="ByPercentage" AssignmentBasis="Item"><PriceDerivationRuleID>1</PriceDerivationRuleID>
+                    <Percent Action="Subtract">10.00000</Percent>
+                </PriceDerivationRule>
+                <ReasonCode>13:5</ReasonCode>
+                <pcms:PCMSRetailPriceModifier><pcms:DetailDiscountNumber>1</pcms:DetailDiscountNumber>
+                    <pcms:DetailDiscountNumber>2</pcms:DetailDiscountNumber>
+                    <pcms:DiscountableAmount>60.00</pcms:DiscountableAmount>
+                    <pcms:Quantity>2.00000</pcms:Quantity>
+                </pcms:PCMSRetailPriceModifier>
+            </RetailPriceModifier>
+            <Tax><SequenceNumber>0</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+            <pcms:PCMSReturn><pcms:ExtendedAmountAllDiscounts>54.00</pcms:ExtendedAmountAllDiscounts>
+                <pcms:ExtendedAmountExclStaffDiscount>54.00</pcms:ExtendedAmountExclStaffDiscount>
+                <pcms:ItemReduced>False</pcms:ItemReduced>
+                <pcms:ItemStatus>1</pcms:ItemStatus>
+                <pcms:LinkedItemLevel>0</pcms:LinkedItemLevel>
+                <pcms:ReasonCode>11:3</pcms:ReasonCode>
+                <pcms:StockCategory>2607</pcms:StockCategory>
+                <pcms:StockCondition>2801</pcms:StockCondition>
+            </pcms:PCMSReturn>
+        </Return>
+    </LineItem>
+        <LineItem><SequenceNumber>1</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tax><SequenceNumber>1</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+        </LineItem>
+        <LineItem><SequenceNumber>2</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tender TenderType="GiftCertificate" TypeCode="Refund"><TenderID>138</TenderID>
+                <Amount>54.00</Amount>
+                <pcms:PCMSTender><pcms:MediaType>15</pcms:MediaType>
+                </pcms:PCMSTender>
+            </Tender>
+        </LineItem>
+        <Total TotalType="TransactionGrandAmount" pcms:NegativeValue="True">54.00</Total>
+        <Total TotalType="TransactionNetAmount" pcms:NegativeValue="True">45.38</Total>
+        <Total TotalType="TransactionTaxAmount" pcms:NegativeValue="True">8.62</Total>
+    </RetailTransaction>
+    <pcms:PCMSTransaction><OperatorByPassApproval><ApproverID />
+        <ApprovalDateTime>2015-08-27T20:07:06+02:00</ApprovalDateTime>
+    </OperatorByPassApproval>
+    </pcms:PCMSTransaction>
+</Transaction>
+</mns:POSLog>
+</mns:Payload>
+</mns:MnSDocument>
+        <?xml version="1.0" encoding="UTF-8" standalone="no"?><mns:MnSDocument xmlns:mns="http://www.nrf-arts.org/IXRetail/namespace/" xmlns:pcms="http://www.pcmsgroup.com/XML">
+<mns:Header><MessageId>CY_NAV_00211</MessageId>
+    <CorrelationId>CY_20150901145144</CorrelationId>
+    <CreatedTimestamp>2015-09-01T14:51:44+02:00</CreatedTimestamp>
+    <SourceApplicationName>CY_NAV</SourceApplicationName>
+    <InterfaceId>I2029</InterfaceId>
+    <InterfaceName>International Basket Level Sales</InterfaceName>
+    <PayloadName>POSLog</PayloadName>
+    <BatchMessageCount>1</BatchMessageCount>
+    <BatchRecordCount>1</BatchRecordCount>
+    <BatchRecordSum>54.00</BatchRecordSum>
+</mns:Header>
+<mns:Payload><mns:POSLog><Transaction><BusinessUnit><UnitID TypeCode="RetailStore">9482</UnitID>
+    <Address><AddressLine>AKROPOLIS</AddressLine>
+        <Country Code="CY" />
+    </Address>
+</BusinessUnit>
+    <BusinessUnit><UnitID TypeCode="  AdministrationCenter" />
+    </BusinessUnit>
+    <WorkstationID>19</WorkstationID>
+    <SequenceNumber>34</SequenceNumber>
+    <EndDateTime>2015-08-27T20:07:22+02:00</EndDateTime>
+    <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+    <BusinessDayDate>2015-08-27</BusinessDayDate>
+    <OperatorID>101</OperatorID>
+    <CurrencyCode>EUR</CurrencyCode>
+    <ReceiptNumber>000000012</ReceiptNumber>
+    <RetailTransaction TransactionStatus="Finished" Version="2.2"><LineItem><SequenceNumber>0</SequenceNumber>
+        <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+        <Return ItemType="Stock"><ItemID>20318178</ItemID>
+            <MerchandiseHierarchy Level="5">T17/NU</MerchandiseHierarchy>
+            <POSIdentity POSIDType="PLU"><POSItemID>20318178</POSItemID>
+            </POSIdentity>
+            <RegularSalesUnitPrice>30.00</RegularSalesUnitPrice>
+            <ActualSalesUnitPrice>27.00</ActualSalesUnitPrice>
+            <ExtendedAmount>54.00</ExtendedAmount>
+            <Quantity>2.00000</Quantity>
+            <RetailPriceModifier MethodCode="PriceOverride"><SequenceNumber>0</SequenceNumber>
+                <Amount Action="Subtract">6.00</Amount>
+                <PriceDerivationRule AccountingType="Discount" Method="ByPercentage" AssignmentBasis="Item"><PriceDerivationRuleID>1</PriceDerivationRuleID>
+                    <Percent Action="Subtract">10.00000</Percent>
+                </PriceDerivationRule>
+                <ReasonCode>13:5</ReasonCode>
+                <pcms:PCMSRetailPriceModifier><pcms:DetailDiscountNumber>1</pcms:DetailDiscountNumber>
+                    <pcms:DetailDiscountNumber>2</pcms:DetailDiscountNumber>
+                    <pcms:DiscountableAmount>60.00</pcms:DiscountableAmount>
+                    <pcms:Quantity>2.00000</pcms:Quantity>
+                </pcms:PCMSRetailPriceModifier>
+            </RetailPriceModifier>
+            <Tax><SequenceNumber>0</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+            <pcms:PCMSReturn><pcms:ExtendedAmountAllDiscounts>54.00</pcms:ExtendedAmountAllDiscounts>
+                <pcms:ExtendedAmountExclStaffDiscount>54.00</pcms:ExtendedAmountExclStaffDiscount>
+                <pcms:ItemReduced>False</pcms:ItemReduced>
+                <pcms:ItemStatus>1</pcms:ItemStatus>
+                <pcms:LinkedItemLevel>0</pcms:LinkedItemLevel>
+                <pcms:ReasonCode>11:3</pcms:ReasonCode>
+                <pcms:StockCategory>2607</pcms:StockCategory>
+                <pcms:StockCondition>2801</pcms:StockCondition>
+            </pcms:PCMSReturn>
+        </Return>
+    </LineItem>
+        <LineItem><SequenceNumber>1</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tax><SequenceNumber>1</SequenceNumber>
+                <TaxableAmount>54.00</TaxableAmount>
+                <Amount>8.62</Amount>
+                <Percent>19.00000</Percent>
+                <TaxRuleID>S</TaxRuleID>
+                <TaxGroupID>CYS</TaxGroupID>
+                <pcms:PCMSTax><pcms:TaxRuleName>CYVAT</pcms:TaxRuleName>
+                </pcms:PCMSTax>
+            </Tax>
+        </LineItem>
+        <LineItem><SequenceNumber>2</SequenceNumber>
+            <BeginDateTime>2015-08-27T20:07:06+02:00</BeginDateTime>
+            <Tender TenderType="GiftCertificate" TypeCode="Refund"><TenderID>138</TenderID>
+                <Amount>54.00</Amount>
+                <pcms:PCMSTender><pcms:MediaType>15</pcms:MediaType>
+                </pcms:PCMSTender>
+            </Tender>
+        </LineItem>
+        <Total TotalType="TransactionGrandAmount" pcms:NegativeValue="True">54.00</Total>
+        <Total TotalType="TransactionNetAmount" pcms:NegativeValue="True">45.38</Total>
+        <Total TotalType="TransactionTaxAmount" pcms:NegativeValue="True">8.62</Total>
+    </RetailTransaction>
+    <pcms:PCMSTransaction><OperatorByPassApproval><ApproverID />
+        <ApprovalDateTime>2015-08-27T20:07:06+02:00</ApprovalDateTime>
+    </OperatorByPassApproval>
+    </pcms:PCMSTransaction>
+</Transaction>
+</mns:POSLog>
+</mns:Payload>
+</mns:MnSDocument>

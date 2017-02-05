@@ -2,23 +2,15 @@ package in.dreamlabs.xmlavro
 
 import java.io.IOException
 
+import in.dreamlabs.xmlavro.config.XSDConfig
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
 import org.apache.xerces.dom.DOMInputImpl
 import org.apache.xerces.impl.Constants
-import org.apache.xerces.impl.xs.{
-  SchemaGrammar,
-  XMLSchemaLoader,
-  XSComplexTypeDecl
-}
+import org.apache.xerces.impl.xs.{SchemaGrammar, XMLSchemaLoader, XSComplexTypeDecl}
 import org.apache.xerces.xni.parser.{XMLEntityResolver, XMLInputSource}
 import org.apache.xerces.xni.{XMLResourceIdentifier, XNIException}
-import org.apache.xerces.xs.XSConstants.{
-  ATTRIBUTE_DECLARATION,
-  ELEMENT_DECLARATION,
-  MODEL_GROUP,
-  WILDCARD
-}
+import org.apache.xerces.xs.XSConstants.{ATTRIBUTE_DECLARATION, ELEMENT_DECLARATION, MODEL_GROUP, WILDCARD}
 import org.apache.xerces.xs.XSTypeDefinition.{COMPLEX_TYPE, SIMPLE_TYPE}
 import org.apache.xerces.xs._
 
@@ -29,19 +21,16 @@ import scala.reflect.io.Path
 /**
   * Created by Royce on 20/01/2017.
   */
-final class SchemaFixer(xsdFile: Path, avscFile: Path) {
-  var debug = false
-  private var _baseDir: Option[Path] = None
-  var rebuildChoice = true
+final class SchemaBuilder(config: XSDConfig) {
+  private val debug = config.debug
+  XNode.namespaces = config.namespaces
+  private val baseDir = config.baseDir
+  private val rebuildChoice = config.rebuildChoice
+  private val xsdFile = config.xsdFile
+  private val avscFile = config.avscFile
+  private val schemas = mutable.Map[String, Schema]()
   private var typeCount = -1
   private var typeLevel = 0
-  private val schemas = mutable.Map[String, Schema]()
-
-  def baseDir: Option[Path] = _baseDir
-
-  def baseDir_=(path: Path) {
-    _baseDir = Some(path)
-  }
 
   def createSchema(): Unit = {
     val errorHandler = new ErrorHandler
@@ -57,40 +46,39 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
       loader load schemaInput
     }
     xsdIn.close()
-    errorHandler check ()
+    errorHandler check()
 
     // Generate schema for all the elements
     val schema = {
-      val tempSchemas = mutable.LinkedHashMap[Source, Schema]()
+      val tempSchemas = mutable.LinkedHashMap[XSObject, Schema]()
       val elements: XSNamedMap =
         model.getComponents(XSConstants ELEMENT_DECLARATION)
       for ((_, ele: XSElementDeclaration) <- elements.asScala) {
-        debug(
-          "Processing root element " + ele.getName + "{" + ele.getNamespace + "}")
-        tempSchemas += (Source(ele.getName) -> processType(
-          ele.getTypeDefinition,
+        debug(s"Processing root element ${XNode(ele) toString}")
+        tempSchemas += ele -> processType(ele.getTypeDefinition,
           optional = false,
-          array = false))
+          array = false)
       }
 
       if (tempSchemas isEmpty)
-        throw XSDException("No root element declaration")
+        throw ConversionError("No root element declaration found")
 
       // Create root record from the schemas generated
       if (tempSchemas.size == 1) tempSchemas.valuesIterator.next()
       else {
         val nullSchema = Schema.create(Schema.Type.NULL)
         val fields = mutable.ListBuffer[Field]()
-        for ((source, record) <- tempSchemas) {
+        for ((ele, record) <- tempSchemas) {
           val optionalSchema = Schema createUnion List[Schema](nullSchema,
-                                                               record).asJava
-          val field = new Field(source.name, optionalSchema, null, null)
-          field.addProp(Source.SOURCE, source.toString)
+            record).asJava
+          val field =
+            new Field(validName(ele.getName).get, optionalSchema, null, null)
+          field.addProp(XNode.SOURCE, XNode(ele).source)
           fields += field
         }
         val record = Schema.createRecord(generateTypeName, null, null, false)
         record.setFields(fields.asJava)
-        record.addProp(Source.SOURCE, Source.DOCUMENT)
+        record.addProp(XNode.SOURCE, XNode.DOCUMENT)
         record
       }
     }
@@ -98,7 +86,7 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
     // Write the schema output
     val avscOut = avscFile.toFile.bufferedOutput()
     avscOut write schema.toString(true).getBytes()
-    avscOut close ()
+    avscOut close()
   }
 
   private def processType(eleType: XSTypeDefinition,
@@ -111,11 +99,10 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
         val name = complexTypeName(eleType)
         debug(s"Creating schema for type $name")
         schemas.getOrElse(name, createRecord(name, eleType))
-      case others => throw XSDException(s"Unknown Element type: $others")
+      case others => throw ConversionError(s"Unknown Element type: $others")
     }
     if (array)
       schema = Schema createArray schema
-    // TODO Check if or else if
     if (optional) {
       val nullSchema = Schema create Schema.Type.NULL
       schema = Schema createUnion List[Schema](nullSchema, schema).asJava
@@ -125,110 +112,70 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
   }
 
   private def processGroup(
-      term: XSTerm,
-      innerOptional: Boolean = false,
-      array: Boolean = false): mutable.Map[String, Field] = {
+                            term: XSTerm,
+                            innerOptional: Boolean = false,
+                            array: Boolean = false): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     val group = term.asInstanceOf[XSModelGroup]
     group.getCompositor match {
       case XSModelGroup.COMPOSITOR_CHOICE =>
         if (rebuildChoice)
           fields ++= processGroupParticle(group,
-                                          innerOptional = true,
-                                          innerArray = array)
+            innerOptional = true,
+            innerArray = array)
         else if (!array)
           fields ++= processGroupParticle(group,
-                                          innerOptional = true,
-                                          innerArray = false)
+            innerOptional = true,
+            innerArray = false)
         else {
           val name = generateTypeName
           val groupRecord = createRecord(generateTypeName, group)
           fields += (name -> new Field(name,
-                                       Schema.createArray(groupRecord),
-                                       null,
-                                       null))
+            Schema.createArray(groupRecord),
+            null,
+            null))
         }
       case XSModelGroup.COMPOSITOR_SEQUENCE =>
         if (!array)
           fields ++= processGroupParticle(group,
-                                          innerOptional,
-                                          innerArray = false)
+            innerOptional,
+            innerArray = false)
         else {
           val name = generateTypeName
           val groupRecord = createRecord(generateTypeName, group)
           fields += (name -> new Field(name,
-                                       Schema.createArray(groupRecord),
-                                       null,
-                                       null))
+            Schema.createArray(groupRecord),
+            null,
+            null))
         }
     }
   }
 
   private def processGroupParticle(
-      group: XSModelGroup,
-      innerOptional: Boolean,
-      innerArray: Boolean): mutable.Map[String, Field] = {
+                                    group: XSModelGroup,
+                                    innerOptional: Boolean,
+                                    innerArray: Boolean): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     for (particle <- group.getParticles.asScala.map(
-           _.asInstanceOf[XSParticle])) {
+      _.asInstanceOf[XSParticle])) {
       val optional = innerOptional || particle.getMinOccurs == 0
       val array = innerArray || particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
       val innerTerm = particle.getTerm
       innerTerm.getType match {
         case ELEMENT_DECLARATION | WILDCARD =>
           val field = createField(innerTerm, optional, array)
-          fields += (field.getProp(Source.SOURCE) -> field)
+          fields += (field.name() -> field)
         case MODEL_GROUP =>
           fields ++= processGroup(innerTerm, optional, array)
-        case _ => throw XSDException(s"Unsupported term type ${group.getType}")
+        case _ =>
+          throw ConversionError(s"Unsupported term type ${group.getType}")
       }
     }
     fields
   }
 
-//  private def processSequence(
-//      group: XSModelGroup,
-//      innerOptional: Boolean): mutable.Map[String, Field] = {
-//    val fields = mutable.LinkedHashMap[String, Field]()
-//    for (particle <- group.getParticles.asScala.map(
-//           _.asInstanceOf[XSParticle])) {
-//      val optional = innerOptional || particle.getMinOccurs == 0
-//      val array = particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
-//      val innerTerm = particle.getTerm
-//      innerTerm.getType match {
-//        case ELEMENT_DECLARATION | WILDCARD =>
-//          val field = createField(innerTerm, optional, array)
-//          fields += (field.getProp(Source.SOURCE) -> field)
-//        case MODEL_GROUP =>
-//          fields ++= processGroup(innerTerm, optional, array)
-//        case _ => throw XSDException(s"Unsupported term type ${group.getType}")
-//      }
-//    }
-//    fields
-//  }
-
-//  private def processChoice(group: XSModelGroup): mutable.Map[String, Field] = {
-//    val fields = mutable.LinkedHashMap[String, Field]()
-//    for (particle <- group.getParticles.asScala.map(
-//           _.asInstanceOf[XSParticle])) {
-//      val array = particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
-//      val innerTerm = particle.getTerm
-//      innerTerm.getType match {
-//        case ELEMENT_DECLARATION | WILDCARD =>
-//          val field = createField(innerTerm, optional = true, array)
-//          fields += (field.getProp(Source.SOURCE) -> field)
-//        case MODEL_GROUP =>
-//          fields ++= processGroup(innerTerm,
-//                                  innerOptional = true,
-//                                  array = array)
-//        case _ => throw XSDException(s"Unsupported term type ${group.getType}")
-//      }
-//    }
-//    fields
-//  }
-
   private def processAttributes(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                                 complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
 
     // Process normal attributes
@@ -236,38 +183,37 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
     for (attribute <- attributes.asScala.map(_.asInstanceOf[XSAttributeUse])) {
       val optional = !attribute.getRequired
       val field = createField(attribute.getAttrDeclaration, optional)
-      fields += (field.getProp(Source.SOURCE) -> field)
+      fields += (field.name() -> field)
     }
 
     // Process wildcard attribute
     val wildcard = Option(complexType.getAttributeWildcard)
     if (wildcard isDefined) {
       val field = createField(wildcard.get, optional = true)
-      fields += (field.getProp(Source.SOURCE) -> field)
+      fields += (field.name() -> field)
     }
     fields
   }
 
   private def processExtension(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                                complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
 
-    if (complexType derivedFromType (SchemaGrammar.fAnySimpleType, XSConstants.DERIVATION_EXTENSION)) {
+    if (complexType derivedFromType(SchemaGrammar.fAnySimpleType, XSConstants.DERIVATION_EXTENSION)) {
       var extnType = complexType
       while (extnType.getBaseType.getTypeCategory == XSTypeDefinition.COMPLEX_TYPE) extnType =
         extnType.getBaseType.asInstanceOf[XSComplexTypeDefinition]
-      val name = validName(Source.TEXT_VALUE)
       val fieldSchema =
         processType(extnType.getBaseType, optional = true, array = false)
-      val field = new Field(name.get, fieldSchema, null, null)
-      field.addProp(Source.SOURCE, Source(Source.TEXT_VALUE).toString())
-      fields += (field.getProp(Source.SOURCE) -> field)
+      val field = new Field(XNode.TEXT_VALUE, fieldSchema, null, null)
+      field.addProp(XNode.SOURCE, XNode.textNode.source)
+      fields += (field.name() -> field)
     }
     fields
   }
 
   private def processParticle(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                               complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     val particle = Option(complexType.getParticle)
     if (particle isDefined)
@@ -275,55 +221,62 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
     fields
   }
 
+  // Create a list of avsc fields from the element (attributes, text, inner groups)
   private def createFields(typeDef: XSObject): List[Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     typeDef match {
       case complexType: XSComplexTypeDefinition =>
-        fields ++= processAttributes(complexType)
-        fields ++= processExtension(complexType)
-        fields ++= processParticle(complexType)
-      case complexType: XSTerm => fields ++= processGroup(complexType)
+        updateFields(fields, processAttributes(complexType))
+        updateFields(fields, processExtension(complexType))
+        updateFields(fields, processParticle(complexType))
+      case complexType: XSTerm =>
+        updateFields(fields, processGroup(complexType))
     }
     fields.values.toList
   }
 
-  private def createField(source: XSObject,
+  // Checks if the new set of fields are already existing and generates a new name for duplicate fields
+  private def updateFields(originalFields: mutable.Map[String, Field],
+                           newField: mutable.Map[String, Field]) = {
+    //TODO make it unique
+    originalFields ++= newField
+  }
+
+  // Create field for an element
+  private def createField(ele: XSObject,
                           optional: Boolean,
                           array: Boolean = false): Schema.Field = {
-    val field: Field = source.getType match {
+    val field: Field = ele.getType match {
       case ELEMENT_DECLARATION | ATTRIBUTE_DECLARATION =>
-        val (sourceType, attribute) = source.getType match {
+        val (eleType, attribute) = ele.getType match {
           case ELEMENT_DECLARATION =>
-            (source.asInstanceOf[XSElementDeclaration].getTypeDefinition,
-             false)
+            (ele.asInstanceOf[XSElementDeclaration].getTypeDefinition, false)
           case ATTRIBUTE_DECLARATION =>
-            (source.asInstanceOf[XSAttributeDeclaration].getTypeDefinition,
-             true)
+            (ele.asInstanceOf[XSAttributeDeclaration].getTypeDefinition, true)
         }
-        val fieldSchema: Schema = processType(sourceType, optional, array)
-        val name: Option[String] = validName(source.getName)
-        //TODO Generate Unique Name
+        val fieldSchema: Schema = processType(eleType, optional, array)
 
-        val field: Field = new Field(name.get, fieldSchema, null, null)
-        field.addProp(Source.SOURCE,
-                      Source(source.getName, attribute).toString())
+        val field: Field =
+          new Field(validName(ele.getName).get, fieldSchema, null, null)
+        field.addProp(XNode.SOURCE, XNode(ele, attribute).source)
 
-        if (sourceType.getTypeCategory == SIMPLE_TYPE) {
+        if (eleType.getTypeCategory == SIMPLE_TYPE) {
           val tempType =
-            sourceType.asInstanceOf[XSSimpleTypeDefinition].getBuiltInKind
+            eleType.asInstanceOf[XSSimpleTypeDefinition].getBuiltInKind
           if (tempType == XSConstants.DATETIME_DT)
             field.addProp("comment", "timestamp")
         }
         field
       case WILDCARD =>
         val map = Schema.createMap(Schema.create(Schema.Type.STRING))
-        new Field(Source.WILDCARD, map, null, null)
+        new Field(XNode.WILDCARD, map, null, null)
       case _ =>
-        throw XSDException("Invalid source object type " + source.getType)
+        throw ConversionError("Invalid source object type " + ele.getType)
     }
     field
   }
 
+  // Create record for an element
   private def createRecord(name: String, eleType: XSObject): Schema = {
     val schema = Schema.createRecord(name, null, null, false)
     schemas += (name -> schema)
@@ -372,7 +325,7 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
           case _: IllegalArgumentException =>
         }
         // Handle hive keywords
-        if (SchemaFixer.HIVE_KEYWORDS.contains(finalName.toUpperCase))
+        if (SchemaBuilder.HIVE_KEYWORDS.contains(finalName.toUpperCase))
           finalName = finalName + "_value"
         Option(finalName)
       }
@@ -380,19 +333,19 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
   }
 
   private def primaryType(schemaType: XSTypeDefinition): Schema.Type = {
-    val avroType = SchemaFixer.PRIMITIVES get schemaType
-        .asInstanceOf[XSSimpleTypeDefinition]
-        .getBuiltInKind
+    val avroType = SchemaBuilder.PRIMITIVES get schemaType
+      .asInstanceOf[XSSimpleTypeDefinition]
+      .getBuiltInKind
     if (avroType isEmpty) Schema.Type.STRING
     else avroType.get
   }
 
   private def debug(message: String): Unit =
-    if (debug) println(("-" * typeLevel) + message)
+    if (debug) println(s"${"-" * typeLevel * 4} $message")
 
   /** Read the referenced XSD as per name specified */
   private class SchemaResolver(private val baseDir: Path)
-      extends XMLEntityResolver {
+    extends XMLEntityResolver {
     System.setProperty("user.dir", baseDir.toAbsolute.path)
 
     @throws[XNIException]
@@ -409,9 +362,7 @@ final class SchemaFixer(xsdFile: Path, avscFile: Path) {
 
 }
 
-object SchemaFixer {
-  def apply(xsdFile: Path, avscFile: Path) = new SchemaFixer(xsdFile, avscFile)
-
+object SchemaBuilder {
   val PRIMITIVES: Map[Short, Schema.Type] = Map(
     XSConstants.BOOLEAN_DT -> Schema.Type.BOOLEAN,
     XSConstants.INT_DT -> Schema.Type.INT,
@@ -434,4 +385,6 @@ object SchemaFixer {
   )
   val HIVE_KEYWORDS: List[String] =
     List("EXCHANGE", "OVER", "TIMESTAMP", "DATETIME")
+
+  def apply(config: XSDConfig) = new SchemaBuilder(config)
 }

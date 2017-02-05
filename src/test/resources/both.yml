@@ -1,0 +1,26 @@
+dynamic: true
+dynamicSource: ENVIRONMENT
+debug: false
+baseDir: "test/resources"
+namespaces: true
+XSD:
+  xsdFile: "books.xsd"
+  avscFile: "books.avsc"
+  rebuildChoice: true
+
+XML:
+  xmlFile: "books.xml"
+  avscFile: "books.avsc"
+  avroFile: "books.avro"
+  validationXSD: "books.xsd"
+  splitBy: "book"
+  ignoreWarnings: true
+  streamingInput: true
+  caseSensitive: true
+  ignoreCaseFor:
+    - "Something"
+
+
+
+
+

@@ -1,0 +1,4 @@
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.books.com/XML"
+            elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xsd:element name="author" type="xsd:string"/>
+</xsd:schema>

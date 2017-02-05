@@ -63,4 +63,77 @@
         </website>
         <sold>23</sold>
     </book>
+    <book id="b004">
+        <author>Dan Brown</author>
+        <title>Digital Fortress</title>
+        <genre>Mystery Thriller</genre>
+        <pub_date>2003-12-17T09:30:47.0Z</pub_date>
+        <review>
+            <title>Best SciFi Thriller</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller2</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller3</title>
+        </review>
+        <alias>
+            <title>Encryto</title>
+            <language>Italian</language>
+            <language>French</language>
+        </alias>
+        <website>
+            <url>www.danbrown.com</url>
+        </website>
+        <sold>23</sold>
+    </book>
+    <book id="b005">
+        <author>Dan Brown</author>
+        <title>Digital Fortress</title>
+        <genre>Mystery Thriller</genre>
+        <pub_date>2003-12-17T09:30:47.0Z</pub_date>
+        <review>
+            <title>Best SciFi Thriller</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller2</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller3</title>
+        </review>
+        <alias>
+            <title>Encryto</title>
+            <language>Italian</language>
+            <language>French</language>
+        </alias>
+        <website>
+            <url>www.danbrown.com</url>
+        </website>
+        <sold>23</sold>
+    </book>
+    <book id="b006">
+        <author>Dan Brown</author>
+        <title>Digital Fortress</title>
+        <genre>Mystery Thriller</genre>
+        <pub_date>2003-12-17T09:30:47.0Z</pub_date>
+        <review>
+            <title>Best SciFi Thriller</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller2</title>
+        </review>
+        <review>
+            <title>Best SciFi Thriller3</title>
+        </review>
+        <alias>
+            <title>Encryto</title>
+            <language>Italian</language>
+            <language>French</language>
+        </alias>
+        <website>
+            <url>www.danbrown.com</url>
+        </website>
+        <sold>23</sold>
+    </book>
+
 </bks:books>

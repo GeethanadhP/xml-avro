@@ -1,0 +1,15 @@
+dynamic: true
+dynamicSource: ENVIRONMENT
+debug: true
+baseDir: "src/test/resources"
+namespaces: true
+XSD:
+  xsdFile: "books.xsd"
+  avscFile: "books.avsc"
+  rebuildChoice: true
+
+
+
+
+
+
