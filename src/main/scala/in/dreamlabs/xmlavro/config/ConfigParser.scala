@@ -1,9 +1,10 @@
 package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.Utils
+import in.dreamlabs.xmlavro.{ConversionError, Utils}
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
+import scala.collection.mutable
 import scala.reflect.io.Path
 
 /**
@@ -66,6 +67,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
         throw new IllegalArgumentException(
           "Too many values provided for xml option")
       if (stream isDefined) tempConfig.streamingInput = stream.get
+      tempConfig.documentRootTag = ""
       if (splitBy isDefined) tempConfig.splitBy = splitBy.get
       if (ignoreMissing isDefined) tempConfig.ignoreMissing = ignoreMissing.get
       if (validateSchema isDefined)
@@ -76,7 +78,24 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
   private def fetchConfig(configFile: Path): Config = {
     Utils.startTimer("Loading YML")
     val configReader = configFile.toFile.bufferedReader()
-    val obj = new Yaml(new Constructor(classOf[Config])) load configReader
+    val configData = StringBuilder.newBuilder
+    var line = configReader.readLine()
+    val variables = mutable.ListBuffer[String]()
+    val pattern = "\\$\\{(.*)\\}".r
+    while (line != null) {
+      val matches = pattern.findAllMatchIn(line)
+      matches.foreach {
+        tempMatch =>
+          try line = line.replace(tempMatch.matched, sys.env(tempMatch.group(1)))
+          catch {
+            case _: NoSuchElementException => throw ConversionError(tempMatch.group(1) + " is not found in the environment variables")
+          }
+      }
+      configData append line+"\n"
+      line = configReader.readLine()
+    }
+
+    val obj = new Yaml(new Constructor(classOf[Config])) load configData.mkString
     Utils.endTimer("Loading YML")
     obj.asInstanceOf[Config]
   }

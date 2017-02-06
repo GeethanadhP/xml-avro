@@ -2,8 +2,8 @@ apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'scala'
 
-group = 'net.elodina'
-version = '1.0'
+group = 'in.dreamlabs'
+version = '1.2'
 
 description = "A simple tool to convert xml to avro and their respective schemas"
 

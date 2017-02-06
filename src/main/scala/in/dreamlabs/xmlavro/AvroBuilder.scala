@@ -1,9 +1,13 @@
 package in.dreamlabs.xmlavro
 
 import java.io.OutputStream
+import javax.xml.XMLConstants
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
+import javax.xml.stream.util.EventReaderDelegate
 import javax.xml.stream.{XMLEventReader, XMLInputFactory}
+import javax.xml.transform.stax.StAXSource
+import javax.xml.validation.SchemaFactory
 
 import in.dreamlabs.xmlavro.AvroBuilder.unknown
 import in.dreamlabs.xmlavro.RichAvro._
@@ -30,7 +34,22 @@ class AvroBuilder(config: XMLConfig) {
     val xmlIn =
       if (config.streamingInput) System.in
       else config.xmlFile.toFile.bufferedInput()
-    val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
+    val reader = new EventReaderDelegate(XMLInputFactory.newInstance.createXMLEventReader(xmlIn))
+
+    val thread = new Thread {
+      override def run() {
+        Utils.startTimer("XSD Validation")
+        if (validationXSD isDefined) {
+          val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+          val xsdSchema = factory.newSchema(validationXSD.get.jfile)
+          val validator = xsdSchema.newValidator()
+          validator.validate(new StAXSource(reader))
+        }
+        Utils.endTimer("XSD Validation")
+      }
+    }
+    thread.start()
+
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
     val streams = mutable.ListBuffer[OutputStream]()
@@ -74,6 +93,7 @@ class AvroBuilder(config: XMLConfig) {
           if (splitFound && proceed) {
             proceed = event push()
             parentEle = event.name
+            println(s"Processed $parentEle")
             if (event.hasAttributes && proceed) {
               val record = splitRecord.at(event path)
               event.attributes foreach {

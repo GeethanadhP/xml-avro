@@ -3,6 +3,7 @@ package in.dreamlabs.xmlavro.config
 import java.util
 
 import in.dreamlabs.xmlavro.ConversionError
+import in.dreamlabs.xmlavro.Utils.option
 
 import scala.beans.BeanProperty
 import scala.reflect.io.Path
@@ -83,9 +84,10 @@ class XMLConfig {
   var avscFile: Path = _
   var avroFile: Path = _
 
-  @BeanProperty var split: util.List[AvroSplit] = new util.ArrayList[AvroSplit]()
-  @BeanProperty var xmlInput: String = _
+  @BeanProperty var documentRootTag: String = _
   @BeanProperty var ignoreMissing: Boolean = false
+  @BeanProperty var xmlInput: String = _
+  @BeanProperty var split: util.List[AvroSplit] = new util.ArrayList[AvroSplit]()
   @BeanProperty var caseSensitive: Boolean = true
   @BeanProperty var ignoreCaseFor: util.List[String] =
     new util.ArrayList[String]
@@ -107,7 +109,10 @@ class XMLConfig {
   def validate(xsdConfig: Option[XSDConfig]): Unit = {
     if (xmlInput == "stdin")
       streamingInput = true
-    else if (baseDir isDefined) {
+    else if (baseDir isDefined)
+      xmlFile = Path(xmlInput) toAbsoluteWithRoot baseDir.get
+
+    if (baseDir isDefined) {
       xmlFile = Path(xmlInput) toAbsoluteWithRoot baseDir.get
 
       if (Option(avscFile) isDefined)
@@ -116,10 +121,20 @@ class XMLConfig {
         avscFile = xsdConfig.get.xsdFile changeExtension "avsc"
 
       if (Option(avroFile) isDefined)
-        avroFile = avroFile toAbsoluteWithRoot avroFile
+        avroFile = avroFile toAbsoluteWithRoot baseDir.get
       else
         avroFile = xmlFile changeExtension "avro"
+
+      if (validationXSD isDefined)
+        validationXSD = Option(validationXSD.get.toAbsoluteWithRoot(baseDir.get))
     }
+
+
+    if (Option(documentRootTag) isEmpty)
+      throw ConversionError("Document Root Tag is not defined")
+
+    if (option(splitBy) isEmpty)
+      splitBy = documentRootTag
 
     if (split isEmpty) {
       val tempSplit = new AvroSplit
