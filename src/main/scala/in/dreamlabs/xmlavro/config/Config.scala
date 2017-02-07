@@ -78,7 +78,7 @@ class XMLConfig {
   var debug: Boolean = _
   var baseDir: Option[Path] = None
   var xmlFile: Path = _
-  var streamingInput: Boolean = false
+  var streamingInput, streamingOutput: Boolean = false
   var validationXSD: Option[Path] = None
   var splitBy: String = ""
   var avscFile: Path = _
@@ -87,6 +87,7 @@ class XMLConfig {
   @BeanProperty var documentRootTag: String = _
   @BeanProperty var ignoreMissing: Boolean = false
   @BeanProperty var xmlInput: String = _
+  @BeanProperty var avroOutput: String = _
   @BeanProperty var split: util.List[AvroSplit] = new util.ArrayList[AvroSplit]()
   @BeanProperty var caseSensitive: Boolean = true
   @BeanProperty var ignoreCaseFor: util.List[String] =
@@ -107,31 +108,36 @@ class XMLConfig {
   def setAvroFile(value: String): Unit = avroFile = Path(value)
 
   def validate(xsdConfig: Option[XSDConfig]): Unit = {
-    if (xmlInput == "stdin")
-      streamingInput = true
-    else if (baseDir isDefined)
-      xmlFile = Path(xmlInput) toAbsoluteWithRoot baseDir.get
+    if (Option(xmlInput) isDefined)
+      if (xmlInput == "stdin") {
+        streamingInput = true
+        if (Option(avroOutput).isEmpty || avroOutput == "stdout") streamingOutput = true
+        else avroFile = Path(avroOutput)
+      } else {
+        xmlFile = Path(xmlInput)
+        if (Option(avroOutput) isDefined) avroFile = Path(avroOutput)
+        else avroFile = xmlFile changeExtension "avro"
+      }
+    else
+      throw ConversionError("XML Input is not specified in the config")
 
-    if (baseDir isDefined) {
-      xmlFile = Path(xmlInput) toAbsoluteWithRoot baseDir.get
+    if (baseDir.isDefined && !streamingInput)
+      xmlFile = xmlFile toAbsoluteWithRoot baseDir.get
 
-      if (Option(avscFile) isDefined)
+    if (baseDir.isDefined && !streamingOutput)
+      avroFile = avroFile toAbsoluteWithRoot baseDir.get
+
+    if (Option(avscFile).isDefined) {
+      if (baseDir.isDefined)
         avscFile = avscFile toAbsoluteWithRoot baseDir.get
-      else if (xsdConfig isDefined)
-        avscFile = xsdConfig.get.xsdFile changeExtension "avsc"
+    } else if (xsdConfig.isDefined)
+      avscFile = xsdConfig.get.xsdFile changeExtension "avsc"
 
-      if (Option(avroFile) isDefined)
-        avroFile = avroFile toAbsoluteWithRoot baseDir.get
-      else
-        avroFile = xmlFile changeExtension "avro"
-
-      if (validationXSD isDefined)
-        validationXSD = Option(validationXSD.get.toAbsoluteWithRoot(baseDir.get))
-    }
-
+    if (baseDir.isDefined && validationXSD.isDefined)
+      validationXSD = Option(validationXSD.get.toAbsoluteWithRoot(baseDir.get))
 
     if (Option(documentRootTag) isEmpty)
-      throw ConversionError("Document Root Tag is not defined")
+      throw ConversionError("Document Root Tag is not specified in the config")
 
     if (option(splitBy) isEmpty)
       splitBy = documentRootTag
@@ -140,6 +146,7 @@ class XMLConfig {
       val tempSplit = new AvroSplit
       tempSplit.avscFile = avscFile
       tempSplit.avroFile = avroFile
+      tempSplit.stream = streamingOutput
       tempSplit.by = splitBy
       split.add(tempSplit)
     }
@@ -152,6 +159,7 @@ class AvroSplit {
   @BeanProperty var by: String = ""
   var avscFile: Path = _
   var avroFile: Path = _
+  var stream: Boolean = false
 
   def getAvscFile: String = avscFile.path
 
@@ -162,15 +170,17 @@ class AvroSplit {
   def setAvroFile(value: String): Unit = avroFile = Path(value)
 
   def validate(baseDir: Option[Path]): Unit = {
+    if (option(by) isEmpty)
+      ConversionError("Split by is not specified in the config")
+
     if (Option(avroFile) isEmpty)
-      ConversionError("Avro Output is not specified")
+      ConversionError(s"Avro Output is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avroFile = avroFile toAbsoluteWithRoot baseDir.get
 
     if (Option(avscFile) isEmpty)
-      ConversionError("Avsc Schema is not specified")
+      ConversionError(s"Avsc Schema is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avscFile = avscFile toAbsoluteWithRoot baseDir.get
   }
-
 }

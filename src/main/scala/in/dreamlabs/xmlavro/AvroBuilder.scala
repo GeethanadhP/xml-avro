@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro
 
-import java.io.OutputStream
+import java.io.{BufferedInputStream, BufferedOutputStream, OutputStream}
 import javax.xml.XMLConstants
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
@@ -32,23 +32,23 @@ class AvroBuilder(config: XMLConfig) {
 
   def createDatums(): Unit = {
     val xmlIn =
-      if (config.streamingInput) System.in
+      if (config.streamingInput) new BufferedInputStream(System.in)
       else config.xmlFile.toFile.bufferedInput()
     val reader = new EventReaderDelegate(XMLInputFactory.newInstance.createXMLEventReader(xmlIn))
 
-    val thread = new Thread {
-      override def run() {
-        Utils.startTimer("XSD Validation")
-        if (validationXSD isDefined) {
-          val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-          val xsdSchema = factory.newSchema(validationXSD.get.jfile)
-          val validator = xsdSchema.newValidator()
-          validator.validate(new StAXSource(reader))
-        }
-        Utils.endTimer("XSD Validation")
-      }
+    //    val thread = new Thread {
+    //      override def run() {
+    Utils.startTimer("XSD Validation")
+    if (validationXSD isDefined) {
+      val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+      val xsdSchema = factory.newSchema(validationXSD.get.jfile)
+      val validator = xsdSchema.newValidator()
+      validator.validate(new StAXSource(reader))
     }
-    thread.start()
+    Utils.endTimer("XSD Validation")
+    //      }
+    //    }
+    //    thread.start()
 
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
@@ -59,7 +59,7 @@ class AvroBuilder(config: XMLConfig) {
       val fileWriter = new DataFileWriter[Record](datumWriter)
 
       fileWriter setCodec (CodecFactory snappyCodec)
-      val avroOut = split.avroFile.toFile.bufferedOutput()
+      val avroOut = if (split stream) new BufferedOutputStream(System.out) else split.avroFile.toFile.bufferedOutput()
       fileWriter create(schema, avroOut)
       streams += avroOut
       writers += split.by -> fileWriter
@@ -93,7 +93,6 @@ class AvroBuilder(config: XMLConfig) {
           if (splitFound && proceed) {
             proceed = event push()
             parentEle = event.name
-            println(s"Processed $parentEle")
             if (event.hasAttributes && proceed) {
               val record = splitRecord.at(event path)
               event.attributes foreach {
@@ -115,7 +114,6 @@ class AvroBuilder(config: XMLConfig) {
               if (writers contains event.name) {
                 val writer = writers(event name)
                 writer append splitRecord
-                writer flush()
                 splitFound = false
               }
             }
@@ -131,9 +129,12 @@ class AvroBuilder(config: XMLConfig) {
       }
     }
 
-    xmlIn.close()
-    writers.values.foreach(_.close())
+    writers.values.foreach { writer =>
+      writer.flush()
+      writer.close()
+    }
     streams.foreach(_.close())
+    xmlIn.close()
   }
 
   implicit class RichXMLEventIterator(reader: XMLEventReader)

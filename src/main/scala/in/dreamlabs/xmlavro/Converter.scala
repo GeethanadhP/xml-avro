@@ -45,7 +45,7 @@ object Converter {
       else ConfigParser apply args
     } catch {
       case e: IllegalArgumentException =>
-        println(
+        System.err.println(
           "XML Avro converter\nError: " + e.getMessage + "\n\n" + ConfigParser.USAGE + "\n")
         System.exit(1)
     }

@@ -61,12 +61,16 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
         }
       val temp = xml.get
       tempConfig.avscFile = temp.head
-      if (temp.length > 1) tempConfig.xmlFile = temp(1)
-      if (temp.length > 2) tempConfig.avroFile = temp(2)
-      if (temp.length > 3)
-        throw new IllegalArgumentException(
-          "Too many values provided for xml option")
-      if (stream isDefined) tempConfig.streamingInput = stream.get
+      if (stream.isDefined && stream.get) {
+        tempConfig.xmlInput = "stdin"
+        tempConfig.avroOutput = "stdout"
+      } else {
+        if (temp.length > 1) tempConfig.xmlFile = temp(1)
+        if (temp.length > 2) tempConfig.avroFile = temp(2)
+        if (temp.length > 3)
+          throw new IllegalArgumentException(
+            "Too many values provided for xml option")
+      }
       tempConfig.documentRootTag = ""
       if (splitBy isDefined) tempConfig.splitBy = splitBy.get
       if (ignoreMissing isDefined) tempConfig.ignoreMissing = ignoreMissing.get
@@ -81,7 +85,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
     val configData = StringBuilder.newBuilder
     var line = configReader.readLine()
     val variables = mutable.ListBuffer[String]()
-    val pattern = "\\$\\{(.*)\\}".r
+    val pattern = "\\$\\{(.+?)\\}".r
     while (line != null) {
       val matches = pattern.findAllMatchIn(line)
       matches.foreach {
@@ -91,7 +95,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
             case _: NoSuchElementException => throw ConversionError(tempMatch.group(1) + " is not found in the environment variables")
           }
       }
-      configData append line+"\n"
+      configData append line + "\n"
       line = configReader.readLine()
     }
 

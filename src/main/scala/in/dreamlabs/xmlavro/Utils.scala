@@ -121,8 +121,8 @@ object XMLEvents {
   }
 
   def searchField(
-      schema: Schema,
-      node: XNode): (Option[Field], ListBuffer[AvroPath], Schema) = {
+                   schema: Schema,
+                   node: XNode): (Option[Field], ListBuffer[AvroPath], Schema) = {
     var fieldSchema = schema.simplify
     var field = schema.field(node)
     val path = ListBuffer[AvroPath]()
@@ -147,7 +147,7 @@ object XMLEvents {
   def getPath(field: Field,
               virtual: Boolean = false): (ListBuffer[AvroPath], Schema) = {
     val path = ListBuffer[AvroPath]()
-    val name = field name ()
+    val name = field name()
     if (field isArray) {
       if (field.arrayItemType == RECORD) {
         path += AvroPath(name, ARRAY, schemaPath ++ path.reverse, virtual)
@@ -165,7 +165,7 @@ object XMLEvents {
   }
 
   def updatePath(field: Field, virtual: Boolean = false): Unit = {
-    val name = field name ()
+    val name = field name()
     if (field isArray) {
       if (field.arrayItemType == RECORD) {
         schemaPath += AvroPath(name, ARRAY, schemaPath, virtual)
@@ -227,6 +227,8 @@ object Utils {
       if (text.trim == "") None else Option(text)
     else None
   }
+
+  def supplied(obj: AnyRef, name: String): Boolean = if (Option(obj) isEmpty) throw ConversionError(s"$name is required") else true
 
   def startTimer(tag: String): Unit =
     timeMap += tag -> Calendar.getInstance().getTimeInMillis
