@@ -1,13 +1,13 @@
 package in.dreamlabs.xmlavro
 
-import java.io.{BufferedInputStream, BufferedOutputStream, OutputStream}
-import javax.xml.XMLConstants
+import java.io._
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 import javax.xml.stream.util.EventReaderDelegate
 import javax.xml.stream.{XMLEventReader, XMLInputFactory}
-import javax.xml.transform.stax.StAXSource
-import javax.xml.validation.SchemaFactory
+import javax.xml.transform.stream.StreamSource
+import javax.xml.validation.{SchemaFactory, Validator}
+import javax.xml.{XMLConstants, validation}
 
 import in.dreamlabs.xmlavro.AvroBuilder.unknown
 import in.dreamlabs.xmlavro.RichAvro._
@@ -38,14 +38,7 @@ class AvroBuilder(config: XMLConfig) {
 
     //    val thread = new Thread {
     //      override def run() {
-    Utils.startTimer("XSD Validation")
-    if (validationXSD isDefined) {
-      val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-      val xsdSchema = factory.newSchema(validationXSD.get.jfile)
-      val validator = xsdSchema.newValidator()
-      validator.validate(new StAXSource(reader))
-    }
-    Utils.endTimer("XSD Validation")
+
     //      }
     //    }
     //    thread.start()
@@ -67,11 +60,23 @@ class AvroBuilder(config: XMLConfig) {
     }
 
     var splitRecord: Record = null
-    var splitFound: Boolean = false
+    var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
+    var xsdSchema: validation.Schema = null
+    val validationStream = new PipedInputStream
+    val validationPipe = new BufferedOutputStream(new PipedOutputStream(validationStream))
+    var validator: Option[Validator] = None
+
+    if (validationXSD isDefined) {
+      val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+      xsdSchema = factory.newSchema(validationXSD.get.jfile)
+    }
 
     reader.dropWhile(!_.isStartElement).foreach { event =>
+      System.err.println(s"processing ${event.name}")
+      if (documentFound && validator.isDefined)
+        validationPipe.write(event.toString.getBytes)
       event getEventType match {
         case START_DOCUMENT => unknown("Document Start", event)
         case END_DOCUMENT => unknown("Document End", event)
@@ -81,6 +86,14 @@ class AvroBuilder(config: XMLConfig) {
             schemas += event.name -> schemas("")
             writers remove ""
             schemas remove ""
+          }
+          if (config.documentRootTag == event.name) {
+            documentFound = true
+            if (validationXSD isDefined) {
+              validator = Option(xsdSchema.newValidator())
+              new Thread
+              validator.get.validate(new StreamSource(validationStream))
+            }
           }
           if (writers contains event.name) {
             if (splitFound)
@@ -117,6 +130,10 @@ class AvroBuilder(config: XMLConfig) {
                 splitFound = false
               }
             }
+            if (config.documentRootTag == event.name) {
+              documentFound = false
+              validator = None
+            }
           }
         case ATTRIBUTE => unknown("Attribute", event)
         case PROCESSING_INSTRUCTION => unknown("Processing Instruction", event)
@@ -129,6 +146,8 @@ class AvroBuilder(config: XMLConfig) {
       }
     }
 
+    validationStream.close()
+    validationPipe.close()
     writers.values.foreach { writer =>
       writer.flush()
       writer.close()
