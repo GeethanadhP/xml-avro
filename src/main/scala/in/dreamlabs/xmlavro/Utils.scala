@@ -60,6 +60,7 @@ object AvroPath {
             virtual: Boolean = false) =
     new AvroPath(name, pathType, currentPath, virtual)
 
+  def reset: Unit = countsMap.clear()
 }
 
 object XMLEvents {
@@ -236,7 +237,7 @@ object Utils {
   def endTimer(tag: String): Unit = {
     val endTime = Calendar.getInstance().getTimeInMillis
     val startTime = timeMap(tag)
-    System.err.println(s"$tag took: ${endTime - startTime} seconds")
+    System.err.println(s"$tag took: ${(endTime - startTime) / 1000.0} seconds")
     timeMap.remove(tag)
   }
 }

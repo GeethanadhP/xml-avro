@@ -115,6 +115,7 @@ class AvroBuilder(config: XMLConfig) {
                 val writer = writers(event name)
                 writer append splitRecord
                 splitFound = false
+                AvroPath.reset
               }
             }
           }
