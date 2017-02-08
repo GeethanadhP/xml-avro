@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.{ConversionError, Utils}
+import in.dreamlabs.xmlavro.ConversionError
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -80,7 +80,6 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
   }
 
   private def fetchConfig(configFile: Path): Config = {
-    Utils.startTimer("Loading YML")
     val configReader = configFile.toFile.bufferedReader()
     val configData = StringBuilder.newBuilder
     var line = configReader.readLine()
@@ -98,9 +97,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
       configData append line + "\n"
       line = configReader.readLine()
     }
-
     val obj = new Yaml(new Constructor(classOf[Config])) load configData.mkString
-    Utils.endTimer("Loading YML")
     obj.asInstanceOf[Config]
   }
 }

@@ -4,9 +4,9 @@ import java.io._
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 import javax.xml.stream.util.EventReaderDelegate
-import javax.xml.stream.{XMLEventReader, XMLInputFactory}
+import javax.xml.stream.{XMLEventReader, XMLEventWriter, XMLInputFactory, XMLOutputFactory}
 import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.{SchemaFactory, Validator}
+import javax.xml.validation.SchemaFactory
 import javax.xml.{XMLConstants, validation}
 
 import in.dreamlabs.xmlavro.AvroBuilder.unknown
@@ -34,15 +34,8 @@ class AvroBuilder(config: XMLConfig) {
     val xmlIn =
       if (config.streamingInput) new BufferedInputStream(System.in)
       else config.xmlFile.toFile.bufferedInput()
+
     val reader = new EventReaderDelegate(XMLInputFactory.newInstance.createXMLEventReader(xmlIn))
-
-    //    val thread = new Thread {
-    //      override def run() {
-
-    //      }
-    //    }
-    //    thread.start()
-
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
     val streams = mutable.ListBuffer[OutputStream]()
@@ -64,22 +57,50 @@ class AvroBuilder(config: XMLConfig) {
     var proceed: Boolean = false
     var parentEle: String = ""
     var xsdSchema: validation.Schema = null
-    val validationStream = new PipedInputStream
-    val validationPipe = new BufferedOutputStream(new PipedOutputStream(validationStream))
-    var validator: Option[Validator] = None
+
+    var pipeIn: PipedInputStream = null
+    var pipeOut: PipedOutputStream = null
+    var xmlOut: XMLEventWriter = null
+
+    def newValidator() = {
+      closePipes()
+      pipeIn = new PipedInputStream()
+      pipeOut = new PipedOutputStream(pipeIn)
+      xmlOut = XMLOutputFactory.newFactory().createXMLEventWriter(pipeOut)
+    }
+
+    def closePipes() = {
+      if (xmlOut != null) {
+        xmlOut.flush()
+        xmlOut.close()
+      }
+      if (pipeOut != null) {
+        pipeOut.flush()
+        pipeOut.close()
+      }
+      if (pipeIn != null) pipeIn.close()
+    }
+
+    def addToPipe(event: XMLEvent) = {
+      xmlOut add event
+      xmlOut flush()
+    }
+
+    newValidator()
 
     if (validationXSD isDefined) {
       val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
       xsdSchema = factory.newSchema(validationXSD.get.jfile)
+      new Thread {
+        override def run(): Unit = xsdSchema.newValidator().validate(new StreamSource(pipeIn))
+      }.start()
     }
 
-    reader.dropWhile(!_.isStartElement).foreach { event =>
-      System.err.println(s"processing ${event.name}")
-      if (documentFound && validator.isDefined)
-        validationPipe.write(event.toString.getBytes)
+    reader.dropWhile(!_.isStartElement) foreach { event =>
+      if (documentFound && validationXSD.isDefined) addToPipe(event)
+
       event getEventType match {
-        case START_DOCUMENT => unknown("Document Start", event)
-        case END_DOCUMENT => unknown("Document End", event)
+        case START_DOCUMENT | END_DOCUMENT => //Ignore
         case START_ELEMENT =>
           if (writers contains "") {
             writers += event.name -> writers("")
@@ -89,11 +110,7 @@ class AvroBuilder(config: XMLConfig) {
           }
           if (config.documentRootTag == event.name) {
             documentFound = true
-            if (validationXSD isDefined) {
-              validator = Option(xsdSchema.newValidator())
-              new Thread
-              validator.get.validate(new StreamSource(validationStream))
-            }
+            xmlOut.add(event)
           }
           if (writers contains event.name) {
             if (splitFound)
@@ -120,39 +137,28 @@ class AvroBuilder(config: XMLConfig) {
             record.add(event element, event text)
           }
         case END_ELEMENT =>
-          if (splitFound) {
-            if (proceed || event.name == parentEle) {
-              proceed = true
-              event pop()
-              if (writers contains event.name) {
-                val writer = writers(event name)
-                writer append splitRecord
-                splitFound = false
-                AvroPath.reset
-              }
-            }
-            if (config.documentRootTag == event.name) {
-              documentFound = false
-              validator = None
+          if (splitFound && (proceed || event.name == parentEle)) {
+            proceed = true
+            event pop()
+            if (writers contains event.name) {
+              val writer = writers(event name)
+              writer append splitRecord
+              splitFound = false
+              AvroPath.reset
             }
           }
-        case ATTRIBUTE => unknown("Attribute", event)
-        case PROCESSING_INSTRUCTION => unknown("Processing Instruction", event)
-        case COMMENT => // Ignore Comments
-        case ENTITY_REFERENCE => unknown("Entity Reference", event)
-        case DTD => unknown("DTD", event)
-        case CDATA => unknown("CDATA", event)
-        case SPACE => unknown("Space", event)
-        case _ => "Unknown"
+          if (config.documentRootTag == event.name) {
+            documentFound = false
+          }
+        case other => unknown(other.toString, event)
       }
     }
 
-    validationStream.close()
-    validationPipe.close()
     writers.values.foreach { writer =>
       writer.flush()
       writer.close()
     }
+    closePipes()
     streams.foreach(_.close())
     xmlIn.close()
   }
@@ -234,5 +240,4 @@ class AvroBuilder(config: XMLConfig) {
 object AvroBuilder {
   private def unknown(message: String, event: XMLEvent) =
     System.err.println(s"WARNING: Unknown $message: $event")
-
 }

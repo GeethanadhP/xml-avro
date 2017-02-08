@@ -221,7 +221,6 @@ object AvroUtils {
 }
 
 object Utils {
-  private val timeMap = mutable.Map[String, Long]()
   private val cal = Calendar.getInstance()
 
   def option(text: String): Option[String] = {
@@ -230,22 +229,10 @@ object Utils {
     else None
   }
 
-  def supplied(obj: AnyRef, name: String): Boolean = if (Option(obj) isEmpty) throw ConversionError(s"$name is required") else true
-
-  def startTimer(tag: String): Unit =
-    timeMap += tag -> Calendar.getInstance().getTimeInMillis
-
-  def endTimer(tag: String): Unit = {
-    val endTime = Calendar.getInstance().getTimeInMillis
-    val startTime = timeMap(tag)
-    System.err.println(s"$tag took: ${(endTime - startTime) / 1000.0} seconds")
-    timeMap.remove(tag)
-  }
-
-  def profile(tag: String)(func: => Unit): Unit = {
+  def profile(tag: String)(op: => Unit): Unit = {
     val start = cal.getTimeInMillis
-    func
+    op
     val end = cal.getTimeInMillis
-    System.err.println(s"$tag took: ${end - start} seconds")
+    System.err.println(s"$tag took: ${(end - start) / 1000.0} seconds")
   }
 }

@@ -1,7 +1,6 @@
 package in.dreamlabs.xmlavro
 
 import java.io._
-import java.util.Calendar
 
 import in.dreamlabs.xmlavro.config.{Config, ConfigParser, XMLConfig, XSDConfig}
 
@@ -29,10 +28,10 @@ class Converter(val config: Config) {
   }
 
   private def convertXML(xConfig: XMLConfig) {
-    Utils.startTimer("Avro Conversion")
-    val builder = new AvroBuilder(xConfig)
-    builder.createDatums()
-    Utils.endTimer("Avro Conversion")
+    Utils.profile("Avro Conversion") {
+      val builder = new AvroBuilder(xConfig)
+      builder.createDatums()
+    }
   }
 }
 
