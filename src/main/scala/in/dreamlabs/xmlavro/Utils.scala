@@ -26,7 +26,7 @@ class AvroPath(val name: String,
     val builder = StringBuilder.newBuilder
     builder append s"$name"
     currentPath.foreach(path =>
-      builder append path.toString.replace(path name, ""))
+      builder append path.toString)
     builder.mkString
   }
 
@@ -60,7 +60,7 @@ object AvroPath {
             virtual: Boolean = false) =
     new AvroPath(name, pathType, currentPath, virtual)
 
-  def reset: Unit = countsMap.clear()
+  def reset(): Unit = countsMap.clear()
 }
 
 object XMLEvents {
@@ -76,6 +76,8 @@ object XMLEvents {
     rootSchema = schema
     rootRecord = record
     lastSchema = rootSchema
+    eleStack.clear()
+    schemaPath.clear()
   }
 
   def addElement(node: XNode): Boolean = {
@@ -181,7 +183,6 @@ object XMLEvents {
       System.err.println(
         s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
   }
-
 }
 
 object AvroUtils {
@@ -221,8 +222,6 @@ object AvroUtils {
 }
 
 object Utils {
-  private val cal = Calendar.getInstance()
-
   def option(text: String): Option[String] = {
     if (Option(text) isDefined)
       if (text.trim == "") None else Option(text)
@@ -230,9 +229,9 @@ object Utils {
   }
 
   def profile(tag: String)(op: => Unit): Unit = {
-    val start = cal.getTimeInMillis
+    val start = Calendar.getInstance().getTimeInMillis
     op
-    val end = cal.getTimeInMillis
+    val end = Calendar.getInstance().getTimeInMillis
     System.err.println(s"$tag took: ${(end - start) / 1000.0} seconds")
   }
 }

@@ -352,10 +352,11 @@ final class SchemaBuilder(config: XSDConfig) {
     @throws[IOException]
     def resolveEntity(id: XMLResourceIdentifier): XMLInputSource = {
       val fileName = id.getLiteralSystemId
-      debug("Resolving " + fileName)
+      val path = Path(fileName).toAbsoluteWithRoot(baseDir)
+      debug(s"Resolving $fileName")
       val source = new XMLInputSource(id)
-      source.setByteStream(
-        Path(fileName).toAbsoluteWithRoot(baseDir).toFile.bufferedInput())
+      if (path.exists)
+        source.setByteStream(path.toFile.bufferedInput())
       source
     }
   }

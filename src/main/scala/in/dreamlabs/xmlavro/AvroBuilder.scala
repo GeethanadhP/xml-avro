@@ -3,7 +3,6 @@ package in.dreamlabs.xmlavro
 import java.io._
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
-import javax.xml.stream.util.EventReaderDelegate
 import javax.xml.stream.{XMLEventReader, XMLEventWriter, XMLInputFactory, XMLOutputFactory}
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.SchemaFactory
@@ -35,7 +34,7 @@ class AvroBuilder(config: XMLConfig) {
       if (config.streamingInput) new BufferedInputStream(System.in)
       else config.xmlFile.toFile.bufferedInput()
 
-    val reader = new EventReaderDelegate(XMLInputFactory.newInstance.createXMLEventReader(xmlIn))
+    val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
     val streams = mutable.ListBuffer[OutputStream]()
@@ -56,7 +55,10 @@ class AvroBuilder(config: XMLConfig) {
     var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
+    val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
     var xsdSchema: validation.Schema = null
+    if (validationXSD isDefined)
+      xsdSchema = factory.newSchema(validationXSD.get.jfile)
 
     var pipeIn: PipedInputStream = null
     var pipeOut: PipedOutputStream = null
@@ -67,18 +69,27 @@ class AvroBuilder(config: XMLConfig) {
       pipeIn = new PipedInputStream()
       pipeOut = new PipedOutputStream(pipeIn)
       xmlOut = XMLOutputFactory.newFactory().createXMLEventWriter(pipeOut)
+      new Thread {
+        override def run(): Unit = xsdSchema.newValidator().validate(new StreamSource(pipeIn))
+      }.start()
+      Thread.sleep(1000)
     }
 
     def closePipes() = {
       if (xmlOut != null) {
         xmlOut.flush()
         xmlOut.close()
+        xmlOut = null
       }
       if (pipeOut != null) {
         pipeOut.flush()
         pipeOut.close()
+        pipeOut = null
       }
-      if (pipeIn != null) pipeIn.close()
+      if (pipeIn != null) {
+        pipeIn.close()
+        pipeIn = null
+      }
     }
 
     def addToPipe(event: XMLEvent) = {
@@ -86,19 +97,11 @@ class AvroBuilder(config: XMLConfig) {
       xmlOut flush()
     }
 
-    newValidator()
-
-    if (validationXSD isDefined) {
-      val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-      xsdSchema = factory.newSchema(validationXSD.get.jfile)
-      new Thread {
-        override def run(): Unit = xsdSchema.newValidator().validate(new StreamSource(pipeIn))
-      }.start()
-    }
+    //    newValidator()
 
     reader.dropWhile(!_.isStartElement) foreach { event =>
-      if (documentFound && validationXSD.isDefined) addToPipe(event)
-
+      if (documentFound && validationXSD.isDefined)
+        addToPipe(event)
       event getEventType match {
         case START_DOCUMENT | END_DOCUMENT => //Ignore
         case START_ELEMENT =>
@@ -110,7 +113,10 @@ class AvroBuilder(config: XMLConfig) {
           }
           if (config.documentRootTag == event.name) {
             documentFound = true
-            xmlOut.add(event)
+            if (validationXSD isDefined) {
+              newValidator()
+              addToPipe(event)
+            }
           }
           if (writers contains event.name) {
             if (splitFound)
@@ -118,6 +124,7 @@ class AvroBuilder(config: XMLConfig) {
             splitFound = true
             splitRecord = schemas(event name).newRecord
             XMLEvents.setSchema(schemas(event name), splitRecord)
+            AvroPath.reset()
             proceed = true
           }
           if (splitFound && proceed) {
@@ -144,11 +151,11 @@ class AvroBuilder(config: XMLConfig) {
               val writer = writers(event name)
               writer append splitRecord
               splitFound = false
-              AvroPath.reset
             }
           }
           if (config.documentRootTag == event.name) {
             documentFound = false
+            //            closePipes()
           }
         case other => unknown(other.toString, event)
       }
