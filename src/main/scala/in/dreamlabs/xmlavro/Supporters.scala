@@ -1,10 +1,17 @@
 package in.dreamlabs.xmlavro
 
+import javax.xml.stream.XMLOutputFactory
+import javax.xml.stream.events.XMLEvent
+
 import in.dreamlabs.xmlavro.Utils.option
+import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.xerces.xni.XNIException
 import org.apache.xerces.xni.parser.{XMLErrorHandler, XMLParseException}
 import org.apache.xerces.xs.XSObject
 import org.w3c.dom.{DOMError, DOMErrorHandler}
+import org.xml.sax.{ErrorHandler, SAXParseException}
+
+import scala.collection.mutable
 
 /**
   * Created by Royce on 20/01/2017.
@@ -14,7 +21,7 @@ case class ConversionError(message: String = null, cause: Throwable = null)
   def this(cause: Throwable) = this(null, cause)
 }
 
-class ErrorHandler extends XMLErrorHandler with DOMErrorHandler {
+class XSDErrorHandler extends XMLErrorHandler with DOMErrorHandler {
   private var exception: Option[XMLParseException] = None
   private var error: Option[DOMError] = None
 
@@ -51,6 +58,16 @@ class ErrorHandler extends XMLErrorHandler with DOMErrorHandler {
       throw ConversionError(location + " " + error.get.getMessage)
     }
   }
+}
+
+class ValidationErrorHandler(var xml: XMLDocument) extends ErrorHandler {
+  def warning(exception: SAXParseException): Unit = handle(exception)
+
+  def error(exception: SAXParseException): Unit = handle(exception)
+
+  def fatalError(exception: SAXParseException): Unit = handle(exception)
+
+  private def handle(exception: SAXParseException): Unit = xml.fail(exception)
 }
 
 case class XNode(name: String,
@@ -110,4 +127,38 @@ object XNode {
 
   def wildNode(attribute: Boolean): XNode =
     new XNode(WILDCARD, null, null, attribute)
+}
+
+
+class XMLDocument(config: XMLConfig) {
+  private val events = mutable.ListBuffer[XMLEvent]()
+  var error = false
+  private var exception: Exception = _
+
+  def add(event: XMLEvent): Unit = {
+    if (config.errorFile isDefined)
+      events += event
+  }
+
+  def fail(exception: Exception): Unit = {
+    error = true
+    this.exception = exception
+  }
+
+  def close(): Unit = {
+    if (error && config.errorFile.isDefined) {
+      val out = XMLOutputFactory.newFactory().createXMLEventWriter(config.errorFile.get.toFile.bufferedWriter(append = true))
+      events.foreach(out.add)
+      out.flush()
+      out.close()
+      System.err.println(s"${config.docErrorLevel}: Failed processing the message")
+      exception.printStackTrace(System.err)
+    }
+    reset()
+  }
+
+  def reset(): Unit = {
+    events.clear()
+    error = false
+  }
 }

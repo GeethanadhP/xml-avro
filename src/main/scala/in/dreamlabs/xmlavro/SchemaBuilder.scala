@@ -33,7 +33,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private var typeLevel = 0
 
   def createSchema(): Unit = {
-    val errorHandler = new ErrorHandler
+    val errorHandler = new XSDErrorHandler
     val xsdIn = xsdFile.toFile.bufferedInput
     val model = {
       val schemaInput = new DOMInputImpl()

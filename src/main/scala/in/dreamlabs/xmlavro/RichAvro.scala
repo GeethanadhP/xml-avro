@@ -82,6 +82,10 @@ trait RichAvro {
               record.put(field name, array)
             }
             array.add(AvroUtils.createValue(field arrayItemType, value))
+          } else if (field.fieldType == STRING) {
+            val currentValue = record.get(field name)
+            if (currentValue != null) record.put(field name, s"$currentValue$value")
+            else record put(field name, value)
           } else
             record.put(field name,
               AvroUtils.createValue(field fieldType, value))

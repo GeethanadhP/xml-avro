@@ -83,11 +83,14 @@ class XMLConfig {
   var splitBy: String = ""
   var avscFile: Path = _
   var avroFile: Path = _
+  var errorFile: Option[Path] = None
 
   @BeanProperty var documentRootTag: String = _
   @BeanProperty var ignoreMissing: Boolean = false
+  @BeanProperty var suppressWarnings: Boolean = false
   @BeanProperty var xmlInput: String = _
   @BeanProperty var avroOutput: String = _
+  @BeanProperty var docErrorLevel: String = "WARNING"
   @BeanProperty var split: util.List[AvroSplit] = new util.ArrayList[AvroSplit]()
   @BeanProperty var caseSensitive: Boolean = true
   @BeanProperty var ignoreCaseFor: util.List[String] =
@@ -98,6 +101,12 @@ class XMLConfig {
 
   def setValidationXSD(value: String): Unit =
     validationXSD = Option(Path(value))
+
+  def getErrorFile: String =
+    if (errorFile isDefined) errorFile.get.path else null
+
+  def setErrorFile(value: String): Unit =
+    errorFile = Option(Path(value))
 
   def getAvscFile: String = avscFile.path
 
@@ -135,6 +144,9 @@ class XMLConfig {
 
     if (baseDir.isDefined && validationXSD.isDefined)
       validationXSD = Option(validationXSD.get.toAbsoluteWithRoot(baseDir.get))
+
+    if (baseDir.isDefined && errorFile.isDefined)
+      errorFile = Option(errorFile.get.toAbsoluteWithRoot(baseDir.get))
 
     if (Option(documentRootTag) isEmpty)
       throw ConversionError("Document Root Tag is not specified in the config")

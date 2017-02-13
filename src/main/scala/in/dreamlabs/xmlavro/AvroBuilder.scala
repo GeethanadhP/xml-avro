@@ -44,7 +44,9 @@ class AvroBuilder(config: XMLConfig) {
       val fileWriter = new DataFileWriter[Record](datumWriter)
 
       fileWriter setCodec (CodecFactory snappyCodec)
-      val avroOut = if (split stream) new BufferedOutputStream(System.out) else split.avroFile.toFile.bufferedOutput()
+      val avroOut =
+        if (split stream) new BufferedOutputStream(System.out)
+        else split.avroFile.toFile.bufferedOutput()
       fileWriter create(schema, avroOut)
       streams += avroOut
       writers += split.by -> fileWriter
@@ -55,6 +57,9 @@ class AvroBuilder(config: XMLConfig) {
     var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
+    val currentXML: XMLDocument = new XMLDocument(config)
+    var exc: Exception = null
+
     val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
     var xsdSchema: validation.Schema = null
     if (validationXSD isDefined)
@@ -70,7 +75,11 @@ class AvroBuilder(config: XMLConfig) {
       pipeOut = new PipedOutputStream(pipeIn)
       xmlOut = XMLOutputFactory.newFactory().createXMLEventWriter(pipeOut)
       new Thread {
-        override def run(): Unit = xsdSchema.newValidator().validate(new StreamSource(pipeIn))
+        override def run(): Unit = {
+          val validator = xsdSchema.newValidator()
+          validator.setErrorHandler(new ValidationErrorHandler(currentXML))
+          validator.validate(new StreamSource(pipeIn))
+        }
       }.start()
       Thread.sleep(1000)
     }
@@ -97,67 +106,84 @@ class AvroBuilder(config: XMLConfig) {
       xmlOut flush()
     }
 
-    //    newValidator()
+    var i = 0
 
     reader.dropWhile(!_.isStartElement) foreach { event =>
-      if (documentFound && validationXSD.isDefined)
-        addToPipe(event)
-      event getEventType match {
-        case START_DOCUMENT | END_DOCUMENT => //Ignore
-        case START_ELEMENT =>
-          if (writers contains "") {
-            writers += event.name -> writers("")
-            schemas += event.name -> schemas("")
-            writers remove ""
-            schemas remove ""
-          }
-          if (config.documentRootTag == event.name) {
-            documentFound = true
-            if (validationXSD isDefined) {
-              newValidator()
-              addToPipe(event)
-            }
-          }
-          if (writers contains event.name) {
-            if (splitFound)
-              ConversionError("Splits cannot be inside each other, they should be completely separated tags")
-            splitFound = true
-            splitRecord = schemas(event name).newRecord
-            XMLEvents.setSchema(schemas(event name), splitRecord)
-            AvroPath.reset()
-            proceed = true
-          }
-          if (splitFound && proceed) {
-            proceed = event push()
-            parentEle = event.name
-            if (event.hasAttributes && proceed) {
-              val record = splitRecord.at(event path)
-              event.attributes foreach {
-                case (xEle, value) =>
-                  record.add(xEle, value)
+      try {
+        if (documentFound && config.errorFile.isDefined)
+          currentXML add event
+        if (documentFound && validationXSD.isDefined)
+          addToPipe(event)
+        event getEventType match {
+          case START_DOCUMENT | END_DOCUMENT => //Ignore
+          case START_ELEMENT =>
+            if (!currentXML.error) {
+              if (writers contains "") {
+                writers += event.name -> writers("")
+                schemas += event.name -> schemas("")
+                writers remove ""
+                schemas remove ""
+              }
+              if (config.documentRootTag == event.name) {
+                documentFound = true
+                i += 1
+                println(s"Processing $i document")
+                proceed = true
+                splitFound = false
+                currentXML reset()
+                currentXML add event
+                if (validationXSD isDefined) {
+                  newValidator()
+                  addToPipe(event)
+                }
+              }
+              if (writers.contains(event.name) && !currentXML.error) {
+                if (splitFound)
+                  ConversionError(
+                    "Splits cannot be inside each other, they should be completely separated tags")
+                splitFound = true
+                splitRecord = schemas(event name).newRecord
+                XMLEvents.setSchema(schemas(event name), splitRecord)
+                AvroPath.reset()
+                proceed = true
+              }
+              if (splitFound && proceed) {
+                proceed = event push()
+                parentEle = event.name
+                if (event.hasAttributes && proceed) {
+                  val record = splitRecord.at(event path)
+                  event.attributes foreach {
+                    case (xEle, value) =>
+                      record.add(xEle, value)
+                  }
+                }
               }
             }
-          }
-        case CHARACTERS =>
-          if (splitFound && proceed && event.hasText) {
-            val record = splitRecord.at(event path)
-            record.add(event element, event text)
-          }
-        case END_ELEMENT =>
-          if (splitFound && (proceed || event.name == parentEle)) {
-            proceed = true
-            event pop()
-            if (writers contains event.name) {
-              val writer = writers(event name)
-              writer append splitRecord
-              splitFound = false
+          case CHARACTERS =>
+            if (splitFound && proceed && !currentXML.error && event.hasText) {
+              val record = splitRecord.at(event path)
+              record.add(event element, event text)
             }
-          }
-          if (config.documentRootTag == event.name) {
-            documentFound = false
-            //            closePipes()
-          }
-        case other => unknown(other.toString, event)
+          case END_ELEMENT =>
+            if (!currentXML.error) {
+              if (splitFound && (proceed || event.name == parentEle)) {
+                proceed = true
+                event pop()
+                if (writers.contains(event.name)) {
+                  val writer = writers(event name)
+                  writer append splitRecord
+                  splitFound = false
+                }
+              }
+            }
+            if (config.documentRootTag == event.name) {
+              documentFound = false
+              if (config.errorFile.isDefined) currentXML.close()
+            }
+          case other => unknown(other.toString, event)
+        }
+      } catch {
+        case e: Exception => currentXML.fail(e)
       }
     }
 
@@ -213,7 +239,8 @@ class AvroBuilder(config: XMLConfig) {
     def hasAttributes: Boolean = attributes nonEmpty
 
     def push(): Boolean = {
-      if (eleStack.isEmpty) addElement(XNode(name, nsURI, nsName, attribute = false))
+      if (eleStack.isEmpty)
+        addElement(XNode(name, nsURI, nsName, attribute = false))
       else addElement(XNode(element, name, nsURI, nsName, attribute = false))
     }
 
