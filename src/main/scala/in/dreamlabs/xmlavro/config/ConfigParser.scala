@@ -83,7 +83,6 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
     val configReader = configFile.toFile.bufferedReader()
     val configData = StringBuilder.newBuilder
     var line = configReader.readLine()
-    val variables = mutable.ListBuffer[String]()
     val pattern = "\\$\\{(.+?)\\}".r
     while (line != null) {
       val matches = pattern.findAllMatchIn(line)

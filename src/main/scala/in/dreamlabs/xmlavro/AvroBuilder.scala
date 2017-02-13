@@ -3,28 +3,29 @@ package in.dreamlabs.xmlavro
 import java.io._
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
-import javax.xml.stream.{XMLEventReader, XMLEventWriter, XMLInputFactory, XMLOutputFactory}
-import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.SchemaFactory
-import javax.xml.{XMLConstants, validation}
+import javax.xml.stream.{XMLEventReader, XMLInputFactory}
 
 import in.dreamlabs.xmlavro.AvroBuilder.unknown
 import in.dreamlabs.xmlavro.RichAvro._
+import in.dreamlabs.xmlavro.Utils.info
 import in.dreamlabs.xmlavro.XMLEvents.{addElement, eleStack, removeElement}
 import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.avro.Schema
+import org.apache.avro.Schema.{Field, Type}
+import org.apache.avro.Schema.Type._
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.specific.SpecificDatumWriter
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks.{break, breakable}
 
 /**
   * Created by Royce on 25/01/2017.
   */
 class AvroBuilder(config: XMLConfig) {
-  private val splits = config.split
-  private val validationXSD = config.validationXSD
+  Utils.debugEnabled = config.debug
   RichAvro.caseSensitive = config.caseSensitive
   RichAvro.ignoreMissing = config.ignoreMissing
   XNode.namespaces = config.namespaces
@@ -38,7 +39,7 @@ class AvroBuilder(config: XMLConfig) {
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
     val streams = mutable.ListBuffer[OutputStream]()
-    splits.forEach { split =>
+    config.split.forEach { split =>
       val schema = new Schema.Parser().parse(split.avscFile.jfile)
       val datumWriter = new SpecificDatumWriter[Record](schema)
       val fileWriter = new DataFileWriter[Record](datumWriter)
@@ -57,87 +58,35 @@ class AvroBuilder(config: XMLConfig) {
     var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
-    val currentXML: XMLDocument = new XMLDocument(config)
-    var exc: Exception = null
-
-    val factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-    var xsdSchema: validation.Schema = null
-    if (validationXSD isDefined)
-      xsdSchema = factory.newSchema(validationXSD.get.jfile)
-
-    var pipeIn: PipedInputStream = null
-    var pipeOut: PipedOutputStream = null
-    var xmlOut: XMLEventWriter = null
-
-    def newValidator() = {
-      closePipes()
-      pipeIn = new PipedInputStream()
-      pipeOut = new PipedOutputStream(pipeIn)
-      xmlOut = XMLOutputFactory.newFactory().createXMLEventWriter(pipeOut)
-      new Thread {
-        override def run(): Unit = {
-          val validator = xsdSchema.newValidator()
-          validator.setErrorHandler(new ValidationErrorHandler(currentXML))
-          validator.validate(new StreamSource(pipeIn))
-        }
-      }.start()
-      Thread.sleep(1000)
-    }
-
-    def closePipes() = {
-      if (xmlOut != null) {
-        xmlOut.flush()
-        xmlOut.close()
-        xmlOut = null
-      }
-      if (pipeOut != null) {
-        pipeOut.flush()
-        pipeOut.close()
-        pipeOut = null
-      }
-      if (pipeIn != null) {
-        pipeIn.close()
-        pipeIn = null
-      }
-    }
-
-    def addToPipe(event: XMLEvent) = {
-      xmlOut add event
-      xmlOut flush()
-    }
+    var currentDoc: Option[XMLDocument] = None
 
     var i = 0
 
     reader.dropWhile(!_.isStartElement) foreach { event =>
       try {
-        if (documentFound && config.errorFile.isDefined)
-          currentXML add event
-        if (documentFound && validationXSD.isDefined)
-          addToPipe(event)
+        if (currentDoc isDefined)
+          currentDoc.get add event
         event getEventType match {
           case START_DOCUMENT | END_DOCUMENT => //Ignore
           case START_ELEMENT =>
-            if (!currentXML.error) {
-              if (writers contains "") {
-                writers += event.name -> writers("")
-                schemas += event.name -> schemas("")
-                writers remove ""
-                schemas remove ""
-              }
-              if (config.documentRootTag == event.name) {
-                documentFound = true
-                i += 1
-                println(s"Processing $i document")
-                proceed = true
-                splitFound = false
-                currentXML reset()
-                currentXML add event
-                if (validationXSD isDefined) {
-                  newValidator()
-                  addToPipe(event)
-                }
-              }
-              if (writers.contains(event.name) && !currentXML.error) {
+            if (writers contains "") {
+              writers += event.name -> writers("")
+              schemas += event.name -> schemas("")
+              writers remove ""
+              schemas remove ""
+            }
+            if (config.documentRootTag == event.name) {
+              documentFound = true
+              i += 1
+              info(s"Processing document $i")
+              proceed = true
+              splitFound = false
+              currentDoc = Some(XMLDocument(config))
+              currentDoc.get add event
+            }
+
+            if (currentDoc.isDefined && !currentDoc.get.error) {
+              if (writers.contains(event.name)) {
                 if (splitFound)
                   ConversionError(
                     "Splits cannot be inside each other, they should be completely separated tags")
@@ -160,12 +109,12 @@ class AvroBuilder(config: XMLConfig) {
               }
             }
           case CHARACTERS =>
-            if (splitFound && proceed && !currentXML.error && event.hasText) {
+            if (splitFound && proceed && currentDoc.isDefined && !currentDoc.get.error && event.hasText) {
               val record = splitRecord.at(event path)
               record.add(event element, event text)
             }
           case END_ELEMENT =>
-            if (!currentXML.error) {
+            if (currentDoc.isDefined && !currentDoc.get.error) {
               if (splitFound && (proceed || event.name == parentEle)) {
                 proceed = true
                 event pop()
@@ -178,12 +127,15 @@ class AvroBuilder(config: XMLConfig) {
             }
             if (config.documentRootTag == event.name) {
               documentFound = false
-              if (config.errorFile.isDefined) currentXML.close()
+              currentDoc.get close()
+              currentDoc = None
             }
           case other => unknown(other.toString, event)
         }
       } catch {
-        case e: Exception => currentXML.fail(e)
+        case e: Exception =>
+          if (currentDoc isDefined) currentDoc.get fail e
+          else throw new ConversionError(e)
       }
     }
 
@@ -191,7 +143,6 @@ class AvroBuilder(config: XMLConfig) {
       writer.flush()
       writer.close()
     }
-    closePipes()
     streams.foreach(_.close())
     xmlIn.close()
   }
@@ -275,3 +226,5 @@ object AvroBuilder {
   private def unknown(message: String, event: XMLEvent) =
     System.err.println(s"WARNING: Unknown $message: $event")
 }
+
+
