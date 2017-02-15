@@ -1,6 +1,7 @@
 package in.dreamlabs.xmlavro
 
 import in.dreamlabs.xmlavro.RichAvro._
+import in.dreamlabs.xmlavro.Utils._
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type._
 import org.apache.avro.Schema.{Field, Type}
@@ -41,8 +42,11 @@ object XMLEvents {
       } else {
         val builder = StringBuilder.newBuilder
         eleStack.reverse.foreach(ele => builder append s"$ele/")
-        System.err.println(
-          s"WARNING: Element ${builder.stripSuffix("/")} is not found in Schema")
+        val message = s"Element ${builder.stripSuffix("/")} is not found in Schema"
+        if (ignoreMissing && !suppressWarnings)
+          warn(message)
+        else if (!ignoreMissing)
+          throw ConversionError(message)
       }
     } else found = true
     found
@@ -123,14 +127,12 @@ object XMLEvents {
         schemaPath += AvroPath(name, ARRAY, schemaPath, virtual)
         lastSchema = field.arraySchema
       } else if (!field.isPrimitiveArray)
-        System.err.println(
-          s"WARNING: 1 - Unknown type ${field.arraySchema} for $name")
+        warn(s"1 - Unknown type ${field.arraySchema} for $name")
     } else if (field isRecord) {
       schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
       lastSchema = field.fieldSchema
     } else if (!field.isPrimitive)
-      System.err.println(
-        s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      warn(s"2 - Unknown type ${field.fieldType} for $name")
   }
 }
 

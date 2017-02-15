@@ -3,11 +3,11 @@ package in.dreamlabs.xmlavro
 import java.io.{PipedReader, PipedWriter}
 import javax.xml.XMLConstants
 import javax.xml.stream.events.XMLEvent
-import javax.xml.stream.{XMLEventWriter, XMLOutputFactory}
+import javax.xml.stream.{XMLEventFactory, XMLEventWriter, XMLOutputFactory}
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.{Schema, SchemaFactory}
 
-import in.dreamlabs.xmlavro.Utils.option
+import in.dreamlabs.xmlavro.Utils._
 import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.xerces.xni.XNIException
 import org.apache.xerces.xni.parser.{XMLErrorHandler, XMLParseException}
@@ -16,6 +16,7 @@ import org.w3c.dom.{DOMError, DOMErrorHandler}
 import org.xml.sax.{ErrorHandler, SAXParseException}
 
 import scala.collection.mutable
+import scala.compat.Platform.EOL
 
 /**
   * Created by Royce on 20/01/2017.
@@ -134,13 +135,15 @@ object XNode {
 }
 
 
-class XMLDocument(config: XMLConfig) {
+class XMLDocument(id: Int, config: XMLConfig) {
   private val events = mutable.ListBuffer[XMLEvent]()
   var error = false
   private var exception: Exception = _
   private var pipeIn: PipedReader = _
   private var pipeOut: PipedWriter = _
   private var eventOut: XMLEventWriter = _
+
+  info(s"Processing document #$id")
 
   if (config.validationXSD isDefined) {
     pipeIn = new PipedReader()
@@ -169,14 +172,16 @@ class XMLDocument(config: XMLConfig) {
 
   def close(): Unit = {
     if (error) {
+      log(config.docErrorLevel, s"Failed processing the document #$id with error ${exception.getMessage}")
+      debug(exception.getStackTrace.mkString("", EOL, EOL))
       if (config.errorFile.isDefined) {
+        log(config.docErrorLevel, s"Saving the failed document #$id in ${config.errorFile.get}")
         val out = XMLOutputFactory.newFactory().createXMLEventWriter(config.errorFile.get.toFile.bufferedWriter(append = true))
+        events += XMLEventFactory.newInstance().createSpace("\n")
         events.foreach(out.add)
         out.flush()
         out.close()
       }
-      System.err.println(s"${config.docErrorLevel}: Failed processing the message")
-      exception.printStackTrace(System.err)
     }
     if (config.validationXSD.isDefined) {
       eventOut.flush()
@@ -191,11 +196,13 @@ class XMLDocument(config: XMLConfig) {
 
 object XMLDocument {
   private var schema: Schema = _
+  private var count: Int = 0
 
   def apply(config: XMLConfig): XMLDocument = {
+    count += 1
     if (Option(schema).isEmpty && config.validationXSD.isDefined)
       schema = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI).newSchema(config.validationXSD.get.jfile)
-    new XMLDocument(config)
+    new XMLDocument(count, config)
   }
 
 }

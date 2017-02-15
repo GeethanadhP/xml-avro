@@ -105,9 +105,13 @@ object Utils {
     else None
   }
 
-  def debug(text: String): Unit = if (debugEnabled) System.err.println(s"DEBUG: $text")
+  def debug(text: String): Unit = if (debugEnabled) log("DEBUG", text)
 
-  def info(text: String): Unit = System.err.println(s"INFO: $text")
+  def info(text: String): Unit = log("INFO", text)
+
+  def warn(text: String): Unit = log("WARNING", text)
+
+  def log(level: String, text: String): Unit = System.err.println(s"${Calendar.getInstance().getTime} ${level.toUpperCase}: $text")
 
   def profile(tag: String)(op: => Unit): Unit = {
     val start = Calendar.getInstance().getTimeInMillis

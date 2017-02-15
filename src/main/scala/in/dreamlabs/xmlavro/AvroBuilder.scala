@@ -11,15 +11,11 @@ import in.dreamlabs.xmlavro.Utils.info
 import in.dreamlabs.xmlavro.XMLEvents.{addElement, eleStack, removeElement}
 import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.avro.Schema
-import org.apache.avro.Schema.{Field, Type}
-import org.apache.avro.Schema.Type._
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.specific.SpecificDatumWriter
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.util.control.Breaks.{break, breakable}
 
 /**
   * Created by Royce on 25/01/2017.
@@ -28,6 +24,7 @@ class AvroBuilder(config: XMLConfig) {
   Utils.debugEnabled = config.debug
   RichAvro.caseSensitive = config.caseSensitive
   RichAvro.ignoreMissing = config.ignoreMissing
+  RichAvro.suppressWarnings = config.suppressWarnings
   XNode.namespaces = config.namespaces
 
   def createDatums(): Unit = {
@@ -60,8 +57,6 @@ class AvroBuilder(config: XMLConfig) {
     var parentEle: String = ""
     var currentDoc: Option[XMLDocument] = None
 
-    var i = 0
-
     reader.dropWhile(!_.isStartElement) foreach { event =>
       try {
         if (currentDoc isDefined)
@@ -77,8 +72,6 @@ class AvroBuilder(config: XMLConfig) {
             }
             if (config.documentRootTag == event.name) {
               documentFound = true
-              i += 1
-              info(s"Processing document $i")
               proceed = true
               splitFound = false
               currentDoc = Some(XMLDocument(config))

@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.util
 
-import in.dreamlabs.xmlavro.RichAvro.{caseSensitive, ignoreMissing}
+import in.dreamlabs.xmlavro.RichAvro.{caseSensitive, ignoreMissing, suppressWarnings}
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type._
 import org.apache.avro.Schema.{Field, Type}
@@ -62,9 +62,9 @@ trait RichAvro {
           val message =
             s"${if (node attribute) "Attribute" else "Element"} ${node name} not found in Schema (even as a wildcard)"
           if (ignoreMissing)
-            System.err.println(s"WARNING: $message")
-          else
-            throw ConversionError(message)
+            if (!suppressWarnings) System.err.println(s"WARNING: $message")
+            else
+              throw ConversionError(message)
         }
       }
       if (fieldOp isDefined) {
@@ -186,4 +186,5 @@ trait RichAvro {
 object RichAvro extends RichAvro {
   var ignoreMissing = false
   var caseSensitive = true
+  var suppressWarnings = false
 }
