@@ -22,7 +22,7 @@ import scala.compat.Platform.EOL
   * Created by Royce on 20/01/2017.
   */
 case class ConversionError(message: String = null, cause: Throwable = null)
-  extends RuntimeException(message, cause) {
+    extends RuntimeException(message, cause) {
   def this(cause: Throwable) = this(null, cause)
 }
 
@@ -82,18 +82,26 @@ case class XNode(name: String,
   var parentNS: String = _
   val element: Boolean = !attribute
 
-  def sourceMatches(sourceTag: String, caseSensitive: Boolean): Boolean = {
-    val matches = if (caseSensitive) source == sourceTag || otherSource == sourceTag
-    else
-      source.equalsIgnoreCase(sourceTag) || otherSource.equalsIgnoreCase(
-        sourceTag)
+  def sourceMatches(sourceTag: String,
+                    caseSensitive: Boolean,
+                    ignoreList: List[String]): Boolean = {
+    val matches =
+      if (caseSensitive)
+        if (ignoreList contains sourceTag.toLowerCase)
+          source.equalsIgnoreCase(sourceTag) || parentNSSource
+            .equalsIgnoreCase(sourceTag)
+        else
+          source == sourceTag || parentNSSource == sourceTag
+      else
+        source.equalsIgnoreCase(sourceTag) || parentNSSource.equalsIgnoreCase(
+          sourceTag)
     matches
   }
 
   def source: String =
     (if (attribute) "attribute" else "element") + s" ${fullName()}"
 
-  def otherSource: String =
+  def parentNSSource: String =
     (if (attribute) "attribute" else "element") + s" ${fullName(other = true)}"
 
   def fullName(other: Boolean = false): String =
@@ -134,7 +142,6 @@ object XNode {
     new XNode(WILDCARD, null, null, attribute)
 }
 
-
 class XMLDocument(id: Int, config: XMLConfig) {
   private val events = mutable.ListBuffer[XMLEvent]()
   var error = false
@@ -172,11 +179,17 @@ class XMLDocument(id: Int, config: XMLConfig) {
 
   def close(): Unit = {
     if (error) {
-      log(config.docErrorLevel, s"Failed processing the document #$id with error ${exception.getMessage}")
+      log(
+        config.docErrorLevel,
+        s"Failed processing document #$id with reason \'${exception.getMessage}\'")
       debug(exception.getStackTrace.mkString("", EOL, EOL))
       if (config.errorFile.isDefined) {
-        log(config.docErrorLevel, s"Saving the failed document #$id in ${config.errorFile.get}")
-        val out = XMLOutputFactory.newFactory().createXMLEventWriter(config.errorFile.get.toFile.bufferedWriter(append = true))
+        log(config.docErrorLevel,
+            s"Saving the failed document #$id in ${config.errorFile.get}")
+        val out = XMLOutputFactory
+          .newFactory()
+          .createXMLEventWriter(
+            config.errorFile.get.toFile.bufferedWriter(append = true))
         events += XMLEventFactory.newInstance().createSpace("\n")
         events.foreach(out.add)
         out.flush()
@@ -201,7 +214,9 @@ object XMLDocument {
   def apply(config: XMLConfig): XMLDocument = {
     count += 1
     if (Option(schema).isEmpty && config.validationXSD.isDefined)
-      schema = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI).newSchema(config.validationXSD.get.jfile)
+      schema = SchemaFactory
+        .newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+        .newSchema(config.validationXSD.get.jfile)
     new XMLDocument(count, config)
   }
 

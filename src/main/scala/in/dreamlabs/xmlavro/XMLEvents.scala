@@ -39,15 +39,8 @@ object XMLEvents {
         schemaPath ++= path.reverse
         updatePath(field.get)
         found = true
-      } else {
-        val builder = StringBuilder.newBuilder
-        eleStack.reverse.foreach(ele => builder append s"$ele/")
-        val message = s"Element ${builder.stripSuffix("/")} is not found in Schema"
-        if (ignoreMissing && !suppressWarnings)
-          warn(message)
-        else if (!ignoreMissing)
-          throw ConversionError(message)
-      }
+      } else
+        AvroPath.missing(eleStack)
     } else found = true
     found
   }
@@ -72,7 +65,6 @@ object XMLEvents {
   private def destroyLastPath(): Int = {
     val tempPath = schemaPath.last
     schemaPath -= tempPath
-    //    tempPath destroy()
     schemaPath size
   }
 
@@ -97,6 +89,8 @@ object XMLEvents {
           }
         }
       }
+    if (field isEmpty)
+      field = schema.wildcard(node.attribute)
     (field, path, fieldSchema)
   }
 
@@ -111,12 +105,10 @@ object XMLEvents {
       } else if (!field.isPrimitiveArray)
         System.err.println(
           s"WARNING: 1 - Unknown type ${field arraySchema} for $name")
-    } else if (field isRecord) {
+    } else if (field isRecord)
       path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
-    } else if (!field.isPrimitive) {
-      System.err.println(
-        s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
-    }
+    else if (!field.isPrimitive && !field.isMap)
+        throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
     (path, field fieldSchema)
   }
 
@@ -131,8 +123,8 @@ object XMLEvents {
     } else if (field isRecord) {
       schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
       lastSchema = field.fieldSchema
-    } else if (!field.isPrimitive)
-      warn(s"2 - Unknown type ${field.fieldType} for $name")
+    } else if (!field.isPrimitive && !field.isMap)
+      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
   }
 }
 

@@ -54,13 +54,13 @@ XML:                            # Convert XML
       avroFile: "publisher.avro"
   
   caseSensitive: true           # Tags matching xml & avsc are case sensitive - Optional (default: true) 
-  ignoreCaseFor:
-    - "Something"
+  ignoreCaseFor:                # Ignore case senitivity for the below list
+    - "SomeTag"
   docErrorLevel: "WARNING"      # Use this level to log in case of error in a document 
   errorFile: "failures.xml"     # Writes the failed documents to this file
 
 XSD:
   xsdFile: "somefile.xsd"       # Source of XSD
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
-
+  stringTimestamp: true         # Represent timestamp as string instead of long
 ```

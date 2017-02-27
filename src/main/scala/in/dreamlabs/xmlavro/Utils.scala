@@ -4,6 +4,8 @@ import java.util.{Calendar, TimeZone}
 import javax.xml.bind.DatatypeConverter
 
 import in.dreamlabs.xmlavro.AvroPath.countsMap
+import in.dreamlabs.xmlavro.RichAvro.{ignoreMissing, suppressWarnings}
+import in.dreamlabs.xmlavro.Utils.warn
 import org.apache.avro.Schema.Type
 import org.apache.avro.Schema.Type._
 
@@ -49,6 +51,7 @@ class AvroPath(val name: String,
 
 object AvroPath {
   val countsMap: mutable.Map[String, Int] = mutable.Map[String, Int]()
+  val missingNodes: ListBuffer[String] = ListBuffer[String]()
 
   def apply(name: String,
             pathType: Type,
@@ -57,6 +60,27 @@ object AvroPath {
     new AvroPath(name, pathType, currentPath, virtual)
 
   def reset(): Unit = countsMap.clear()
+
+  def missing(eleStack: ListBuffer[XNode], node: XNode = null): Unit = {
+    val builder = StringBuilder.newBuilder
+    var missingStack = eleStack
+    var missingNode = node
+    if (Option(node) isEmpty) {
+      missingStack = eleStack.tail
+      missingNode = eleStack.head
+    }
+    missingStack.reverse.foreach(ele => builder append s"$ele/")
+    builder.append(s"${if (missingNode attribute) "@" else ""}${missingNode name}")
+    val fullNode = builder.mkString
+    if (!missingNodes.contains(fullNode)) {
+      missingNodes += fullNode
+      val message = s"$fullNode is not found in Schema (even as a wildcard)"
+      if (ignoreMissing && !suppressWarnings)
+        warn(message)
+      else if (!ignoreMissing)
+        throw ConversionError(message)
+    }
+  }
 }
 
 

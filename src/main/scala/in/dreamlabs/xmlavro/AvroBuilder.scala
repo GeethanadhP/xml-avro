@@ -7,7 +7,6 @@ import javax.xml.stream.{XMLEventReader, XMLInputFactory}
 
 import in.dreamlabs.xmlavro.AvroBuilder.unknown
 import in.dreamlabs.xmlavro.RichAvro._
-import in.dreamlabs.xmlavro.Utils.info
 import in.dreamlabs.xmlavro.XMLEvents.{addElement, eleStack, removeElement}
 import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.avro.Schema
@@ -15,6 +14,7 @@ import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.specific.SpecificDatumWriter
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 /**
@@ -23,6 +23,7 @@ import scala.collection.mutable
 class AvroBuilder(config: XMLConfig) {
   Utils.debugEnabled = config.debug
   RichAvro.caseSensitive = config.caseSensitive
+  RichAvro.ignoreCaseFor = config.ignoreCaseFor.asScala.toList.map(element => element.toLowerCase)
   RichAvro.ignoreMissing = config.ignoreMissing
   RichAvro.suppressWarnings = config.suppressWarnings
   XNode.namespaces = config.namespaces

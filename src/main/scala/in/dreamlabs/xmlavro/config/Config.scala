@@ -55,6 +55,7 @@ class XSDConfig {
   var xsdFile: Path = _
   var avscFile: Path = _
   @BeanProperty var rebuildChoice: Boolean = true
+  @BeanProperty var stringTimestamp: Boolean = false
 
   def getXsdFile: String = xsdFile.path
 

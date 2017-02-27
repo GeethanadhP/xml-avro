@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.util
 
-import in.dreamlabs.xmlavro.RichAvro.{caseSensitive, ignoreMissing, suppressWarnings}
+import in.dreamlabs.xmlavro.RichAvro.{caseSensitive, ignoreCaseFor}
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Type._
 import org.apache.avro.Schema.{Field, Type}
@@ -54,18 +54,13 @@ trait RichAvro {
       val schema = record.getSchema
       var fieldOp = schema field node
       var wildcard = false
+      //TODO Handle wildcard data properly
 
       if (fieldOp isEmpty) {
         fieldOp = schema wildcard (node attribute)
         if (fieldOp isDefined) wildcard = true
-        else {
-          val message =
-            s"${if (node attribute) "Attribute" else "Element"} ${node name} not found in Schema (even as a wildcard)"
-          if (ignoreMissing)
-            if (!suppressWarnings) System.err.println(s"WARNING: $message")
-            else
-              throw ConversionError(message)
-        }
+        else
+          AvroPath.missing(XMLEvents.eleStack, node)
       }
       if (fieldOp isDefined) {
         val field = fieldOp.get
@@ -73,7 +68,22 @@ trait RichAvro {
         if (wildcard) {
           val wildField =
             record.get(field name).asInstanceOf[util.Map[String, AnyRef]]
-          wildField.put(node name, value)
+          val existingVal = wildField.get(node name)
+          if(Option(existingVal) isEmpty)
+            wildField.put(node name, value)
+          else{
+            existingVal match {
+              case existingList: util.ArrayList[AnyRef] =>
+                existingList.add(value)
+              case _ =>
+                val list = new util.ArrayList[AnyRef]()
+                list.add(existingVal)
+                list.add(value)
+                wildField.put(node name, list)
+            }
+
+          }
+
         } else {
           if (field isArray) {
             var array = record.get(field name).asInstanceOf[util.List[AnyRef]]
@@ -99,21 +109,22 @@ trait RichAvro {
       List(STRING, INT, LONG, FLOAT, DOUBLE, BOOLEAN, NULL)
 
     def wildcard(attribute: Boolean): Option[Field] =
-      field(XNode.wildNode(attribute))
+      Option(schema.simplify.getField(XNode.WILDCARD))
 
     def field(node: XNode): Option[Field] = {
       var resultField: Option[Field] = None
+      val tempSchema = schema.simplify
       breakable {
-        schema.simplify.getFields.forEach { field =>
+        tempSchema.getFields.forEach { field =>
           val sourceField = field.getProp(XNode.SOURCE)
-          if (node sourceMatches(sourceField, caseSensitive)) {
+          if (node sourceMatches(sourceField, caseSensitive, ignoreCaseFor)) {
             resultField = Some(field)
             break
           }
         }
       }
       if (resultField isEmpty)
-        resultField = Option(schema.simplify.getField(XNode.TEXT_VALUE))
+        resultField = Option(tempSchema.getField(XNode.TEXT_VALUE))
       resultField
     }
 
@@ -137,6 +148,8 @@ trait RichAvro {
     def isArray: Boolean = schema.getType == ARRAY
 
     def isRecord: Boolean = schema.getType == RECORD
+
+    def isMap: Boolean = schema.getType == MAP
 
     def isPrimitive: Boolean = PRIMITIVES.contains(schemaType)
 
@@ -171,7 +184,12 @@ trait RichAvro {
 
     def isRecord: Boolean = fieldSchema.isRecord
 
+    def isMap: Boolean = fieldSchema.isMap
+
     def isPrimitive: Boolean = fieldSchema.isPrimitive
+
+    def isWildcard: Boolean =
+      if (field.name() == XNode.WILDCARD && field.isMap && Option(field.getProp(XNode.SOURCE)).isEmpty) true else false
 
     def arraySchema: Schema = fieldSchema.arraySchema
 
@@ -186,5 +204,6 @@ trait RichAvro {
 object RichAvro extends RichAvro {
   var ignoreMissing = false
   var caseSensitive = true
+  var ignoreCaseFor: List[String] = _
   var suppressWarnings = false
 }
