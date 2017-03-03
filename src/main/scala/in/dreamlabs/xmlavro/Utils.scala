@@ -141,6 +141,6 @@ object Utils {
     val start = Calendar.getInstance().getTimeInMillis
     op
     val end = Calendar.getInstance().getTimeInMillis
-    System.err.println(s"$tag took: ${(end - start) / 1000.0} seconds")
+    info(s"$tag took: ${(end - start) / 1000.0} seconds")
   }
 }

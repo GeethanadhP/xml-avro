@@ -78,6 +78,7 @@ class XMLConfig {
   var namespaces: Boolean = _
   var debug: Boolean = _
   var baseDir: Option[Path] = None
+  var qaDir: Option[Path] = None
   var xmlFile: Path = _
   var streamingInput, streamingOutput: Boolean = false
   var validationXSD: Option[Path] = None
@@ -96,6 +97,10 @@ class XMLConfig {
   @BeanProperty var caseSensitive: Boolean = true
   @BeanProperty var ignoreCaseFor: util.List[String] =
     new util.ArrayList[String]
+
+  def getQaDir: String = if (qaDir isDefined) qaDir.get.path else null
+
+  def setQaDir(value: String): Unit = qaDir = Option(Path(value))
 
   def getValidationXSD: String =
     if (validationXSD isDefined) validationXSD.get.path else null
@@ -145,6 +150,9 @@ class XMLConfig {
 
     if (baseDir.isDefined && validationXSD.isDefined)
       validationXSD = Option(validationXSD.get.toAbsoluteWithRoot(baseDir.get))
+
+    if (baseDir.isDefined && qaDir.isDefined)
+      qaDir = Option(qaDir.get.toAbsoluteWithRoot(baseDir.get))
 
     if (baseDir.isDefined && errorFile.isDefined)
       errorFile = Option(errorFile.get.toAbsoluteWithRoot(baseDir.get))

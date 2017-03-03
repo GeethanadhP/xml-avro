@@ -276,7 +276,7 @@ final class SchemaBuilder(config: XSDConfig) {
         if (eleType.getTypeCategory == SIMPLE_TYPE) {
           val tempType =
             eleType.asInstanceOf[XSSimpleTypeDefinition].getBuiltInKind
-          if (tempType == XSConstants.DATETIME_DT)
+          if (tempType == XSConstants.DATETIME_DT && !stringTimestamp)
             field.addProp("comment", "timestamp")
         }
         field
@@ -354,7 +354,7 @@ final class SchemaBuilder(config: XSDConfig) {
   }
 
   private def debug(message: String): Unit =
-    if (debug) println(s"${"-" * typeLevel * 4} $message")
+    if (debug) Utils.info(s"${"-" * typeLevel * 4} $message")
 
   /** Read the referenced XSD as per name specified */
   private class SchemaResolver(private val baseDir: Path)

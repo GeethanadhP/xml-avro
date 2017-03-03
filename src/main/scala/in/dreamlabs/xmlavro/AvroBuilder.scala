@@ -27,6 +27,7 @@ class AvroBuilder(config: XMLConfig) {
   RichAvro.ignoreMissing = config.ignoreMissing
   RichAvro.suppressWarnings = config.suppressWarnings
   XNode.namespaces = config.namespaces
+  XMLDocument.config = config
 
   def createDatums(): Unit = {
     val xmlIn =
@@ -57,6 +58,7 @@ class AvroBuilder(config: XMLConfig) {
     var proceed: Boolean = false
     var parentEle: String = ""
     var currentDoc: Option[XMLDocument] = None
+    var prevEvent: XMLEvent = null
 
     reader.dropWhile(!_.isStartElement) foreach { event =>
       try {
@@ -75,7 +77,7 @@ class AvroBuilder(config: XMLConfig) {
               documentFound = true
               proceed = true
               splitFound = false
-              currentDoc = Some(XMLDocument(config))
+              currentDoc = Some(XMLDocument())
               currentDoc.get add event
             }
 
@@ -108,6 +110,13 @@ class AvroBuilder(config: XMLConfig) {
               record.add(event element, event text)
             }
           case END_ELEMENT =>
+            if (splitFound && proceed && currentDoc.isDefined && !currentDoc.get.error && prevEvent.isStartElement) {
+              val path = event.path.last.name
+              if (path != event.name) {
+                val record = splitRecord.at(event path)
+                record.add(event element, "")
+              }
+            }
             if (currentDoc.isDefined && !currentDoc.get.error) {
               if (splitFound && (proceed || event.name == parentEle)) {
                 proceed = true
@@ -119,17 +128,20 @@ class AvroBuilder(config: XMLConfig) {
                 }
               }
             }
-            if (config.documentRootTag == event.name) {
-              documentFound = false
-              currentDoc.get close()
-              currentDoc = None
-            }
           case other => unknown(other.toString, event)
         }
       } catch {
         case e: Exception =>
           if (currentDoc isDefined) currentDoc.get fail e
           else throw new ConversionError(e)
+          proceed = false
+      } finally {
+        if (event.isEndElement && config.documentRootTag == event.name) {
+          documentFound = false
+          currentDoc.get close()
+          currentDoc = None
+        }
+        prevEvent = event
       }
     }
 
@@ -139,6 +151,7 @@ class AvroBuilder(config: XMLConfig) {
     }
     streams.foreach(_.close())
     xmlIn.close()
+    XMLDocument.closeAll()
   }
 
   implicit class RichXMLEventIterator(reader: XMLEventReader)
@@ -211,14 +224,14 @@ class AvroBuilder(config: XMLConfig) {
 
     def text: String = event.asCharacters().getData
 
-    def hasText: Boolean = event.asCharacters().getData.trim != ""
+    def hasText: Boolean = text.trim() != "" || text.matches(" +")
   }
 
 }
 
 object AvroBuilder {
   private def unknown(message: String, event: XMLEvent) =
-    System.err.println(s"WARNING: Unknown $message: $event")
+    Utils.warn(s"WARNING: Unknown $message: $event")
 }
 
 

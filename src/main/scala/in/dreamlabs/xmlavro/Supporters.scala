@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro
 
-import java.io.{PipedReader, PipedWriter}
+import java.io.{IOException, PipedReader, PipedWriter}
 import javax.xml.XMLConstants
 import javax.xml.stream.events.XMLEvent
 import javax.xml.stream.{XMLEventFactory, XMLEventWriter, XMLOutputFactory}
@@ -17,12 +17,13 @@ import org.xml.sax.{ErrorHandler, SAXParseException}
 
 import scala.collection.mutable
 import scala.compat.Platform.EOL
+import scala.reflect.io.Path
 
 /**
   * Created by Royce on 20/01/2017.
   */
 case class ConversionError(message: String = null, cause: Throwable = null)
-    extends RuntimeException(message, cause) {
+  extends RuntimeException(message, cause) {
   def this(cause: Throwable) = this(null, cause)
 }
 
@@ -66,11 +67,17 @@ class XSDErrorHandler extends XMLErrorHandler with DOMErrorHandler {
 }
 
 class ValidationErrorHandler(var xml: XMLDocument) extends ErrorHandler {
-  def warning(exception: SAXParseException): Unit = handle(exception)
+  def warning(exception: SAXParseException): Unit = {
+    handle(exception)
+  }
 
-  def error(exception: SAXParseException): Unit = handle(exception)
+  def error(exception: SAXParseException): Unit = {
+    handle(exception)
+  }
 
-  def fatalError(exception: SAXParseException): Unit = handle(exception)
+  def fatalError(exception: SAXParseException): Unit = {
+    handle(exception)
+  }
 
   private def handle(exception: SAXParseException): Unit = xml.fail(exception)
 }
@@ -142,52 +149,61 @@ object XNode {
     new XNode(WILDCARD, null, null, attribute)
 }
 
-class XMLDocument(id: Int, config: XMLConfig) {
+class XMLDocument(val id: Int, config: XMLConfig) {
   private val events = mutable.ListBuffer[XMLEvent]()
   var error = false
   private var exception: Exception = _
   private var pipeIn: PipedReader = _
   private var pipeOut: PipedWriter = _
   private var eventOut: XMLEventWriter = _
-
   info(s"Processing document #$id")
 
-  if (config.validationXSD isDefined) {
+  private var validationThread = if (config.validationXSD isDefined) {
     pipeIn = new PipedReader()
     pipeOut = new PipedWriter(pipeIn)
-    eventOut = XMLOutputFactory.newFactory().createXMLEventWriter(pipeOut)
-    new Thread {
+    eventOut = XMLOutputFactory.newInstance().createXMLEventWriter(pipeOut)
+    Option(new Thread {
       override def run(): Unit = {
         val validator = XMLDocument.schema.newValidator()
-        validator.setErrorHandler(new ValidationErrorHandler(XMLDocument.this))
-        validator.validate(new StreamSource(pipeIn))
+        //        validator.setErrorHandler(new ValidationErrorHandler(XMLDocument.this))
+        try validator.validate(new StreamSource(pipeIn))
+        catch {
+          case e: SAXParseException => fail(e)
+          case e: Exception => warn("Exception in thread: " + e.getMessage)
+            fail(e)
+        } finally {
+          pipeIn.close()
+          info(s"Finished xsd validation on document #$id")
+        }
       }
-    }.start()
+    })
+  } else None
+
+  if (validationThread isDefined) validationThread.get.start()
+
+  def add(event: XMLEvent): Unit = this.synchronized {
+    if (config.errorFile isDefined) events += event
+    if (validationThread.isDefined && !error) eventOut.add(event)
   }
 
-  def add(event: XMLEvent): Unit = {
-    if (config.errorFile isDefined)
-      events += event
-    if (config.validationXSD isDefined)
-      eventOut.add(event)
+  def fail(exception: Exception): Unit = this.synchronized {
+    if (!error) {
+      error = true
+      this.exception = exception
+      if (validationThread isDefined) validationThread = None
+    }
   }
 
-  def fail(exception: Exception): Unit = {
-    error = true
-    this.exception = exception
-  }
-
-  def close(): Unit = {
+  def close(): Unit = this.synchronized {
     if (error) {
       log(
         config.docErrorLevel,
         s"Failed processing document #$id with reason \'${exception.getMessage}\'")
       debug(exception.getStackTrace.mkString("", EOL, EOL))
       if (config.errorFile.isDefined) {
-        log(config.docErrorLevel,
-            s"Saving the failed document #$id in ${config.errorFile.get}")
+        info(s"Saving the failed document #$id in ${config.errorFile.get}")
         val out = XMLOutputFactory
-          .newFactory()
+          .newInstance()
           .createXMLEventWriter(
             config.errorFile.get.toFile.bufferedWriter(append = true))
         events += XMLEventFactory.newInstance().createSpace("\n")
@@ -196,22 +212,23 @@ class XMLDocument(id: Int, config: XMLConfig) {
         out.close()
       }
     }
-    if (config.validationXSD.isDefined) {
+    if (validationThread isDefined) {
       eventOut.flush()
       pipeOut.flush()
       eventOut.close()
-      Thread.sleep(100)
       pipeOut.close()
-      pipeIn.close()
+      validationThread.get.join()
     }
+    info(s"Closed document #$id")
   }
 }
 
 object XMLDocument {
   private var schema: Schema = _
   private var count: Int = 0
+  var config: XMLConfig = _
 
-  def apply(config: XMLConfig): XMLDocument = {
+  def apply(): XMLDocument = {
     count += 1
     if (Option(schema).isEmpty && config.validationXSD.isDefined)
       schema = SchemaFactory
@@ -220,4 +237,18 @@ object XMLDocument {
     new XMLDocument(count, config)
   }
 
+  def closeAll(): Unit = {
+    if (config.qaDir.isDefined) {
+      val qaDir = config.qaDir.get
+      if (!qaDir.exists)
+        qaDir.jfile.mkdir()
+      try {
+        val docCountOut = Path("DOCUMENT_COUNT").toAbsoluteWithRoot(qaDir).toFile.bufferedWriter()
+        docCountOut.write(count + "")
+        docCountOut.close()
+      } catch {
+        case e: IOException => warn("Problem occurred while writing DOCUMENT_COUNT to QA DIR :" + e.getMessage)
+      }
+    }
+  }
 }
