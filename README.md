@@ -52,7 +52,7 @@ XML:                            # Convert XML
       by: "bookPublisher"
       avscFile: "publisher.avsc"
       avroFile: "publisher.avro"
-  
+  qaDir: "some path"            # Writes some count details 
   caseSensitive: true           # Tags matching xml & avsc are case sensitive - Optional (default: true) 
   ignoreCaseFor:                # Ignore case senitivity for the below list
     - "SomeTag"

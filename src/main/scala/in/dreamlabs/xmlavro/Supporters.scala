@@ -1,14 +1,12 @@
 package in.dreamlabs.xmlavro
 
-import java.io.{IOException, PipedReader, PipedWriter}
-import javax.xml.XMLConstants
-import javax.xml.stream.events.XMLEvent
-import javax.xml.stream.{XMLEventFactory, XMLEventWriter, XMLOutputFactory}
-import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.{Schema, SchemaFactory}
+import java.util.{Calendar, TimeZone}
+import javax.xml.bind.DatatypeConverter
 
+import in.dreamlabs.xmlavro.RichAvro.{ignoreMissing, suppressWarnings}
 import in.dreamlabs.xmlavro.Utils._
-import in.dreamlabs.xmlavro.config.XMLConfig
+import org.apache.avro.Schema.Type
+import org.apache.avro.Schema.Type._
 import org.apache.xerces.xni.XNIException
 import org.apache.xerces.xni.parser.{XMLErrorHandler, XMLParseException}
 import org.apache.xerces.xs.XSObject
@@ -16,8 +14,7 @@ import org.w3c.dom.{DOMError, DOMErrorHandler}
 import org.xml.sax.{ErrorHandler, SAXParseException}
 
 import scala.collection.mutable
-import scala.compat.Platform.EOL
-import scala.reflect.io.Path
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by Royce on 20/01/2017.
@@ -149,106 +146,132 @@ object XNode {
     new XNode(WILDCARD, null, null, attribute)
 }
 
-class XMLDocument(val id: Int, config: XMLConfig) {
-  private val events = mutable.ListBuffer[XMLEvent]()
-  var error = false
-  private var exception: Exception = _
-  private var pipeIn: PipedReader = _
-  private var pipeOut: PipedWriter = _
-  private var eventOut: XMLEventWriter = _
-  info(s"Processing document #$id")
+class AvroPath(val name: String,
+               val pathType: Type,
+               currentPath: ListBuffer[AvroPath],
+               val virtual: Boolean = false) {
 
-  private var validationThread = if (config.validationXSD isDefined) {
-    pipeIn = new PipedReader()
-    pipeOut = new PipedWriter(pipeIn)
-    eventOut = XMLOutputFactory.newInstance().createXMLEventWriter(pipeOut)
-    Option(new Thread {
-      override def run(): Unit = {
-        val validator = XMLDocument.schema.newValidator()
-        //        validator.setErrorHandler(new ValidationErrorHandler(XMLDocument.this))
-        try validator.validate(new StreamSource(pipeIn))
-        catch {
-          case e: SAXParseException => fail(e)
-          case e: Exception => warn("Exception in thread: " + e.getMessage)
-            fail(e)
-        } finally {
-          pipeIn.close()
-          info(s"Finished xsd validation on document #$id")
-        }
-      }
-    })
-  } else None
-
-  if (validationThread isDefined) validationThread.get.start()
-
-  def add(event: XMLEvent): Unit = this.synchronized {
-    if (config.errorFile isDefined) events += event
-    if (validationThread.isDefined && !error) eventOut.add(event)
+  private val innerName = {
+    val builder = StringBuilder.newBuilder
+    builder append s"$name"
+    currentPath.foreach(path =>
+      builder append path.toString)
+    builder.mkString
   }
 
-  def fail(exception: Exception): Unit = this.synchronized {
-    if (!error) {
-      error = true
-      this.exception = exception
-      if (validationThread isDefined) validationThread = None
+  val index: Int =
+    if (countsMap contains innerName) {
+      var currentIndex = countsMap(innerName)
+      currentIndex += 1
+      countsMap += (innerName -> currentIndex)
+      currentIndex
+    } else {
+      countsMap += (innerName -> 0)
+      0
     }
+
+  def destroy(): Unit = {
+    var currentIndex = countsMap(innerName)
+    currentIndex -= 1
+    countsMap += (innerName -> currentIndex)
   }
 
-  def close(): Unit = this.synchronized {
-    if (error) {
-      log(
-        config.docErrorLevel,
-        s"Failed processing document #$id with reason \'${exception.getMessage}\'")
-      debug(exception.getStackTrace.mkString("", EOL, EOL))
-      if (config.errorFile.isDefined) {
-        info(s"Saving the failed document #$id in ${config.errorFile.get}")
-        val out = XMLOutputFactory
-          .newInstance()
-          .createXMLEventWriter(
-            config.errorFile.get.toFile.bufferedWriter(append = true))
-        events += XMLEventFactory.newInstance().createSpace("\n")
-        events.foreach(out.add)
-        out.flush()
-        out.close()
-      }
+  override def toString: String =
+    if (pathType == ARRAY) s"$name[$index]" else name
+}
+
+object AvroPath {
+  val countsMap: mutable.Map[String, Int] = mutable.Map[String, Int]()
+  val missingNodes: ListBuffer[String] = ListBuffer[String]()
+
+  def apply(name: String,
+            pathType: Type,
+            currentPath: ListBuffer[AvroPath],
+            virtual: Boolean = false) =
+    new AvroPath(name, pathType, currentPath, virtual)
+
+  def reset(): Unit = countsMap.clear()
+
+  def missing(eleStack: ListBuffer[XNode], node: XNode = null): Unit = {
+    val builder = StringBuilder.newBuilder
+    var missingStack = eleStack
+    var missingNode = node
+    if (Option(node) isEmpty) {
+      missingStack = eleStack.tail
+      missingNode = eleStack.head
     }
-    if (validationThread isDefined) {
-      eventOut.flush()
-      pipeOut.flush()
-      eventOut.close()
-      pipeOut.close()
-      validationThread.get.join()
+    missingStack.reverse.foreach(ele => builder append s"$ele/")
+    builder.append(s"${if (missingNode attribute) "@" else ""}${missingNode name}")
+    val fullNode = builder.mkString
+    if (!missingNodes.contains(fullNode)) {
+      missingNodes += fullNode
+      val message = s"$fullNode is not found in Schema (even as a wildcard)"
+      if (ignoreMissing && !suppressWarnings)
+        warn(message)
+      else if (!ignoreMissing)
+        throw ConversionError(message)
     }
-    info(s"Closed document #$id")
   }
 }
 
-object XMLDocument {
-  private var schema: Schema = _
-  private var count: Int = 0
-  var config: XMLConfig = _
 
-  def apply(): XMLDocument = {
-    count += 1
-    if (Option(schema).isEmpty && config.validationXSD.isDefined)
-      schema = SchemaFactory
-        .newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-        .newSchema(config.validationXSD.get.jfile)
-    new XMLDocument(count, config)
+object AvroUtils {
+  private val TIMESTAMP_PATTERN =
+    "^(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.*\\d*)Z?$"
+
+  var timeZone: TimeZone = TimeZone.getTimeZone("UTC-0")
+
+  def createValue(nodeType: Type, content: String): AnyRef = {
+    val result = nodeType match {
+      case BOOLEAN => content.toLowerCase == "true" || content == "1"
+      case INT => content.toInt
+      case LONG =>
+        if (content contains "T") parseDateFrom(content trim)
+        else content.toLong
+      case FLOAT => content.toFloat
+      case DOUBLE => content.toDouble
+      case STRING => content
+      case other => throw ConversionError(s"Unsupported type $other")
+    }
+    result.asInstanceOf[AnyRef]
   }
 
-  def closeAll(): Unit = {
-    if (config.qaDir.isDefined) {
-      val qaDir = config.qaDir.get
-      if (!qaDir.exists)
-        qaDir.jfile.mkdir()
-      try {
-        val docCountOut = Path("DOCUMENT_COUNT").toAbsoluteWithRoot(qaDir).toFile.bufferedWriter()
-        docCountOut.write(count + "")
-        docCountOut.close()
-      } catch {
-        case e: IOException => warn("Problem occurred while writing DOCUMENT_COUNT to QA DIR :" + e.getMessage)
-      }
-    }
+  private def parseDateFrom(text: String): Long = {
+    var cal = DatatypeConverter.parseDateTime(text)
+    if (text matches TIMESTAMP_PATTERN)
+      cal.setTimeZone(timeZone)
+    cal.getTimeInMillis
+    //Local
+    val tsp =
+      if (!text.matches(TIMESTAMP_PATTERN)) text.substring(0, 19)
+      else text
+    cal = DatatypeConverter.parseDateTime(tsp)
+    cal.setTimeZone(timeZone)
+    cal.getTimeInMillis
+  }
+}
+
+object Utils {
+  var debugEnabled = false
+
+  def option(text: String): Option[String] = {
+    if (Option(text) isDefined)
+      if (text.trim == "") None else Option(text)
+    else None
+  }
+
+  def debug(text: String): Unit = if (debugEnabled) log("DEBUG", text)
+
+  def info(text: String): Unit = log("INFO", text)
+
+  def warn(text: String): Unit = log("WARNING", text)
+
+  def log(level: String, text: String): Unit = System.err.println(s"${Calendar.getInstance().getTime} ${level.toUpperCase}: $text")
+
+  def profile(tag: String)(op: => Unit): Unit = {
+    val start = Calendar.getInstance().getTimeInMillis
+    op
+    val end = Calendar.getInstance().getTimeInMillis
+    info(s"$tag took: ${(end - start) / 1000.0} seconds")
   }
 }
