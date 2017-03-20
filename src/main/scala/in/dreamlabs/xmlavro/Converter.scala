@@ -14,15 +14,13 @@ class Converter(val config: Config) {
   if (config.XML isDefined) {
     val xConfig = config.XML.get
     if (!xConfig.streamingInput)
-      System.out.println(
-        "Converting: " + xConfig.xmlFile + " -> " + xConfig.avroFile)
+      Utils.info("Converting: " + xConfig.xmlFile + " -> " + xConfig.avroFile)
     convertXML(xConfig)
   }
 
   @throws[IOException]
   private def convertXSD(xConfig: XSDConfig) {
-    System.out.println(
-      "Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
+    Utils.info("Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
     val schemaBuilder = SchemaBuilder(xConfig)
     schemaBuilder createSchema()
   }
@@ -44,7 +42,7 @@ object Converter {
       else ConfigParser apply args
     } catch {
       case e: IllegalArgumentException =>
-        System.err.println(
+        Utils.log("ERROR",
           "XML Avro converter\nError: " + e.getMessage + "\n\n" + ConfigParser.USAGE + "\n")
         System.exit(1)
     }

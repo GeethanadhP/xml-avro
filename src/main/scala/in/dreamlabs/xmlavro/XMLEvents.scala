@@ -103,12 +103,11 @@ object XMLEvents {
         path += AvroPath(name, ARRAY, schemaPath ++ path.reverse, virtual)
         return (path, field arraySchema)
       } else if (!field.isPrimitiveArray)
-        System.err.println(
-          s"WARNING: 1 - Unknown type ${field arraySchema} for $name")
+        warn(s"1 - Unknown type ${field arraySchema} for $name")
     } else if (field isRecord)
       path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
     else if (!field.isPrimitive && !field.isMap)
-        throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
     (path, field fieldSchema)
   }
 

@@ -124,6 +124,7 @@ class AvroBuilder(config: XMLConfig) {
                 if (writers.contains(event.name)) {
                   val writer = writers(event name)
                   writer append splitRecord
+                  Utils.info(s"Writing avro record for ${currentDoc.get.docText} split at ${event.name}")
                   splitFound = false
                 }
               }
@@ -132,8 +133,10 @@ class AvroBuilder(config: XMLConfig) {
         }
       } catch {
         case e: Exception =>
-          if (currentDoc isDefined) currentDoc.get fail e
-          else throw new ConversionError(e)
+          currentDoc match {
+            case None => throw new ConversionError(e)
+            case Some(doc) => doc.fail(e, wait = true)
+          }
           proceed = false
       } finally {
         if (event.isEndElement && config.documentRootTag == event.name) {

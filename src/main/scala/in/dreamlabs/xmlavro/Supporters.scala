@@ -6,6 +6,7 @@ import javax.xml.bind.DatatypeConverter
 import in.dreamlabs.xmlavro.RichAvro.{ignoreMissing, suppressWarnings}
 import in.dreamlabs.xmlavro.Utils._
 import org.apache.avro.Schema.Type
+import AvroPath.countsMap
 import org.apache.avro.Schema.Type._
 import org.apache.xerces.xni.XNIException
 import org.apache.xerces.xni.parser.{XMLErrorHandler, XMLParseException}
