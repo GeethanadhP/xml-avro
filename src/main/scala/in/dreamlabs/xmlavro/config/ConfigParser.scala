@@ -1,9 +1,10 @@
 package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.Utils
+import in.dreamlabs.xmlavro.ConversionError
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
+import scala.collection.mutable
 import scala.reflect.io.Path
 
 /**
@@ -60,12 +61,17 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
         }
       val temp = xml.get
       tempConfig.avscFile = temp.head
-      if (temp.length > 1) tempConfig.xmlFile = temp(1)
-      if (temp.length > 2) tempConfig.avroFile = temp(2)
-      if (temp.length > 3)
-        throw new IllegalArgumentException(
-          "Too many values provided for xml option")
-      if (stream isDefined) tempConfig.streamingInput = stream.get
+      if (stream.isDefined && stream.get) {
+        tempConfig.xmlInput = "stdin"
+        tempConfig.avroOutput = "stdout"
+      } else {
+        if (temp.length > 1) tempConfig.xmlFile = temp(1)
+        if (temp.length > 2) tempConfig.avroFile = temp(2)
+        if (temp.length > 3)
+          throw new IllegalArgumentException(
+            "Too many values provided for xml option")
+      }
+      tempConfig.documentRootTag = ""
       if (splitBy isDefined) tempConfig.splitBy = splitBy.get
       if (ignoreMissing isDefined) tempConfig.ignoreMissing = ignoreMissing.get
       if (validateSchema isDefined)
@@ -74,10 +80,23 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
   }
 
   private def fetchConfig(configFile: Path): Config = {
-    Utils.startTimer("Loading YML")
     val configReader = configFile.toFile.bufferedReader()
-    val obj = new Yaml(new Constructor(classOf[Config])) load configReader
-    Utils.endTimer("Loading YML")
+    val configData = StringBuilder.newBuilder
+    var line = configReader.readLine()
+    val pattern = "\\$\\{(.+?)\\}".r
+    while (line != null) {
+      val matches = pattern.findAllMatchIn(line)
+      matches.foreach {
+        tempMatch =>
+          try line = line.replace(tempMatch.matched, sys.env(tempMatch.group(1)))
+          catch {
+            case _: NoSuchElementException => throw ConversionError(tempMatch.group(1) + " is not found in the environment variables")
+          }
+      }
+      configData append line + "\n"
+      line = configReader.readLine()
+    }
+    val obj = new Yaml(new Constructor(classOf[Config])) load configData.mkString
     obj.asInstanceOf[Config]
   }
 }

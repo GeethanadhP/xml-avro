@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro
 
-import java.io.OutputStream
+import java.io._
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 import javax.xml.stream.{XMLEventReader, XMLInputFactory}
@@ -14,42 +14,39 @@ import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.specific.SpecificDatumWriter
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 /**
   * Created by Royce on 25/01/2017.
   */
 class AvroBuilder(config: XMLConfig) {
-  private val splits = config.split
-  private val validationXSD = config.validationXSD
-  private val caseSensitive = config.caseSensitive
+  Utils.debugEnabled = config.debug
+  RichAvro.caseSensitive = config.caseSensitive
+  RichAvro.ignoreCaseFor = config.ignoreCaseFor.asScala.toList.map(element => element.toLowerCase)
   RichAvro.ignoreMissing = config.ignoreMissing
+  RichAvro.suppressWarnings = config.suppressWarnings
   XNode.namespaces = config.namespaces
-
-  //  def createDatums(): util.List[AnyRef] = {
-  //    val xmlIn = if (config.streamingInput) System.in else config.xmlFile.toFile.bufferedInput()
-  //    val reader: XMLEventReader =
-  //      XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
-  //    val datums = new util.ArrayList[AnyRef]()
-  //    datums.add(getDatums(reader))
-  //    datums
-  //  }
+  XMLDocument.config = config
 
   def createDatums(): Unit = {
     val xmlIn =
-      if (config.streamingInput) System.in
+      if (config.streamingInput) new BufferedInputStream(System.in)
       else config.xmlFile.toFile.bufferedInput()
+
     val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
     val streams = mutable.ListBuffer[OutputStream]()
-    splits.forEach { split =>
+    config.split.forEach { split =>
       val schema = new Schema.Parser().parse(split.avscFile.jfile)
       val datumWriter = new SpecificDatumWriter[Record](schema)
       val fileWriter = new DataFileWriter[Record](datumWriter)
 
       fileWriter setCodec (CodecFactory snappyCodec)
-      val avroOut = split.avroFile.toFile.bufferedOutput()
+      val avroOut =
+        if (split stream) new BufferedOutputStream(System.out)
+        else split.avroFile.toFile.bufferedOutput()
       fileWriter create(schema, avroOut)
       streams += avroOut
       writers += split.by -> fileWriter
@@ -57,72 +54,107 @@ class AvroBuilder(config: XMLConfig) {
     }
 
     var splitRecord: Record = null
-    var splitFound: Boolean = false
+    var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
+    var currentDoc: Option[XMLDocument] = None
+    var prevEvent: XMLEvent = null
 
-    reader.dropWhile(!_.isStartElement).foreach { event =>
-      event getEventType match {
-        case START_DOCUMENT => unknown("Document Start", event)
-        case END_DOCUMENT => unknown("Document End", event)
-        case START_ELEMENT =>
-          if (writers contains "") {
-            writers += event.name -> writers("")
-            schemas += event.name -> schemas("")
-            writers remove ""
-            schemas remove ""
-          }
-          if (writers contains event.name) {
-            if (splitFound)
-              ConversionError("Splits cannot be inside each other, they should be completely separated tags")
-            splitFound = true
-            splitRecord = schemas(event name).newRecord
-            XMLEvents.setSchema(schemas(event name), splitRecord)
-            proceed = true
-          }
-          if (splitFound && proceed) {
-            proceed = event push()
-            parentEle = event.name
-            if (event.hasAttributes && proceed) {
-              val record = splitRecord.at(event path)
-              event.attributes foreach {
-                case (xEle, value) =>
-                  record.add(xEle, value)
-              }
+    reader.dropWhile(!_.isStartElement) foreach { event =>
+      try {
+        if (currentDoc isDefined)
+          currentDoc.get add event
+        event getEventType match {
+          case START_DOCUMENT | END_DOCUMENT => //Ignore
+          case START_ELEMENT =>
+            if (writers contains "") {
+              writers += event.name -> writers("")
+              schemas += event.name -> schemas("")
+              writers remove ""
+              schemas remove ""
             }
-          }
-        case CHARACTERS =>
-          if (splitFound && proceed && event.hasText) {
-            val record = splitRecord.at(event path)
-            record.add(event element, event text)
-          }
-        case END_ELEMENT =>
-          if (splitFound) {
-            if (proceed || event.name == parentEle) {
+            if (config.documentRootTag == event.name) {
+              documentFound = true
               proceed = true
-              event pop()
-              if (writers contains event.name) {
-                val writer = writers(event name)
-                writer append splitRecord
-                writer flush()
-                splitFound = false
+              splitFound = false
+              currentDoc = Some(XMLDocument())
+              currentDoc.get add event
+            }
+
+            if (currentDoc.isDefined && !currentDoc.get.error) {
+              if (writers.contains(event.name)) {
+                if (splitFound)
+                  ConversionError(
+                    "Splits cannot be inside each other, they should be completely separated tags")
+                splitFound = true
+                splitRecord = schemas(event name).newRecord
+                XMLEvents.setSchema(schemas(event name), splitRecord)
+                AvroPath.reset()
+                proceed = true
+              }
+              if (splitFound && proceed) {
+                proceed = event push()
+                parentEle = event.name
+                if (event.hasAttributes && proceed) {
+                  val record = splitRecord.at(event path)
+                  event.attributes foreach {
+                    case (xEle, value) =>
+                      record.add(xEle, value)
+                  }
+                }
               }
             }
+          case CHARACTERS =>
+            if (splitFound && proceed && currentDoc.isDefined && !currentDoc.get.error && event.hasText) {
+              val record = splitRecord.at(event path)
+              record.add(event element, event text)
+            }
+          case END_ELEMENT =>
+            if (splitFound && proceed && currentDoc.isDefined && !currentDoc.get.error && prevEvent.isStartElement) {
+              val path = event.path.last.name
+              if (path != event.name) {
+                val record = splitRecord.at(event path)
+                record.add(event element, "")
+              }
+            }
+            if (currentDoc.isDefined && !currentDoc.get.error) {
+              if (splitFound && (proceed || event.name == parentEle)) {
+                proceed = true
+                event pop()
+                if (writers.contains(event.name)) {
+                  val writer = writers(event name)
+                  writer append splitRecord
+                  Utils.info(s"Writing avro record for ${currentDoc.get.docText} split at ${event.name}")
+                  splitFound = false
+                }
+              }
+            }
+          case other => unknown(other.toString, event)
+        }
+      } catch {
+        case e: Exception =>
+          currentDoc match {
+            case None => throw new ConversionError(e)
+            case Some(doc) => doc.fail(e, wait = true)
           }
-        case ATTRIBUTE => unknown("Attribute", event)
-        case PROCESSING_INSTRUCTION => unknown("Processing Instruction", event)
-        case COMMENT => // Ignore Comments
-        case ENTITY_REFERENCE => unknown("Entity Reference", event)
-        case DTD => unknown("DTD", event)
-        case CDATA => unknown("CDATA", event)
-        case SPACE => unknown("Space", event)
-        case _ => "Unknown"
+          proceed = false
+      } finally {
+        if (event.isEndElement && config.documentRootTag == event.name) {
+          documentFound = false
+          currentDoc.get close()
+          currentDoc = None
+        }
+        prevEvent = event
       }
     }
 
-    xmlIn.close()
-    writers.values.foreach(_.close())
+    writers.values.foreach { writer =>
+      writer.flush()
+      writer.close()
+    }
     streams.foreach(_.close())
+    xmlIn.close()
+    XMLDocument.closeAll()
   }
 
   implicit class RichXMLEventIterator(reader: XMLEventReader)
@@ -139,6 +171,7 @@ class AvroBuilder(config: XMLConfig) {
         Some(event.asStartElement())
       else
         None
+
     private val endEle: Option[EndElement] =
       if (event isEndElement)
         Some(event.asEndElement())
@@ -166,8 +199,11 @@ class AvroBuilder(config: XMLConfig) {
 
     def hasAttributes: Boolean = attributes nonEmpty
 
-    def push(): Boolean =
-      addElement(XNode(name, nsURI, nsName, attribute = false))
+    def push(): Boolean = {
+      if (eleStack.isEmpty)
+        addElement(XNode(name, nsURI, nsName, attribute = false))
+      else addElement(XNode(element, name, nsURI, nsName, attribute = false))
+    }
 
     private def nsURI: String =
       if (startEle isDefined) startEle.get.getName.getNamespaceURI
@@ -191,13 +227,14 @@ class AvroBuilder(config: XMLConfig) {
 
     def text: String = event.asCharacters().getData
 
-    def hasText: Boolean = event.asCharacters().getData.trim != ""
+    def hasText: Boolean = text.trim() != "" || text.matches(" +")
   }
 
 }
 
 object AvroBuilder {
   private def unknown(message: String, event: XMLEvent) =
-    System.err.println(s"WARNING: Unknown $message: $event")
-
+    Utils.warn(s"WARNING: Unknown $message: $event")
 }
+
+

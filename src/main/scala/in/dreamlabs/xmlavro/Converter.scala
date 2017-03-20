@@ -1,7 +1,6 @@
 package in.dreamlabs.xmlavro
 
 import java.io._
-import java.util.Calendar
 
 import in.dreamlabs.xmlavro.config.{Config, ConfigParser, XMLConfig, XSDConfig}
 
@@ -15,24 +14,22 @@ class Converter(val config: Config) {
   if (config.XML isDefined) {
     val xConfig = config.XML.get
     if (!xConfig.streamingInput)
-      System.out.println(
-        "Converting: " + xConfig.xmlFile + " -> " + xConfig.avroFile)
+      Utils.info("Converting: " + xConfig.xmlFile + " -> " + xConfig.avroFile)
     convertXML(xConfig)
   }
 
   @throws[IOException]
   private def convertXSD(xConfig: XSDConfig) {
-    System.out.println(
-      "Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
+    Utils.info("Converting: " + xConfig.xsdFile + " -> " + xConfig.avscFile)
     val schemaBuilder = SchemaBuilder(xConfig)
     schemaBuilder createSchema()
   }
 
   private def convertXML(xConfig: XMLConfig) {
-    Utils.startTimer("Avro Conversion")
-    val builder = new AvroBuilder(xConfig)
-    builder.createDatums()
-    Utils.endTimer("Avro Conversion")
+    Utils.profile("Avro Conversion") {
+      val builder = new AvroBuilder(xConfig)
+      builder.createDatums()
+    }
   }
 }
 
@@ -45,7 +42,7 @@ object Converter {
       else ConfigParser apply args
     } catch {
       case e: IllegalArgumentException =>
-        println(
+        Utils.log("ERROR",
           "XML Avro converter\nError: " + e.getMessage + "\n\n" + ConfigParser.USAGE + "\n")
         System.exit(1)
     }

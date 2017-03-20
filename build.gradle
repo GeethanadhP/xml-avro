@@ -2,8 +2,8 @@ apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'scala'
 
-group = 'net.elodina'
-version = '1.0'
+group = 'in.dreamlabs'
+version = '1.6.2'
 
 description = "A simple tool to convert xml to avro and their respective schemas"
 
@@ -17,6 +17,8 @@ repositories {
 dependencies {
     compile 'org.scala-lang:scala-library:2.12.1'
     compile 'org.scala-lang:scala-reflect:2.12.1'
+//    compileOnly 'org.scala-lang:scala-library:2.11.8'
+//    compileOnly 'org.scala-lang:scala-reflect:2.11.8'
     compile 'org.yaml:snakeyaml:1.17'
     compile 'org.apache.avro:avro:1.7.5'
     compile 'xerces:xercesImpl:2.11.0'
