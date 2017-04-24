@@ -6,6 +6,7 @@ import in.dreamlabs.xmlavro.ConversionError
 import in.dreamlabs.xmlavro.Utils.option
 
 import scala.beans.BeanProperty
+import scala.collection.JavaConverters._
 import scala.reflect.io.Path
 
 /**
@@ -22,7 +23,8 @@ class Config() {
 
   def getBaseDir: String = if (baseDir isDefined) baseDir.get.path else null
 
-  def setBaseDir(value: String): Unit = baseDir = Option(Path(value).toAbsolute)
+  def setBaseDir(value: String): Unit =
+    baseDir = Option(Path(value).toAbsolute)
 
   def getXSD: XSDConfig = XSD.orNull
 
@@ -93,10 +95,16 @@ class XMLConfig {
   @BeanProperty var xmlInput: String = _
   @BeanProperty var avroOutput: String = _
   @BeanProperty var docErrorLevel: String = "WARNING"
-  @BeanProperty var split: util.List[AvroSplit] = new util.ArrayList[AvroSplit]()
+  @BeanProperty var split: util.List[AvroSplit] =
+    new util.ArrayList[AvroSplit]()
   @BeanProperty var caseSensitive: Boolean = true
   @BeanProperty var ignoreCaseFor: util.List[String] =
     new util.ArrayList[String]
+
+  @BeanProperty var useAvroInput: Boolean = false
+  var inputAvroMappings: Map[String, String] = _
+  var inputAvroKey: String = _
+
 
   def getQaDir: String = if (qaDir isDefined) qaDir.get.path else null
 
@@ -122,18 +130,24 @@ class XMLConfig {
 
   def setAvroFile(value: String): Unit = avroFile = Path(value)
 
+  def getInputAvroMappings: util.Map[String, String] =
+    if (Option(inputAvroMappings) isDefined) inputAvroMappings.asJava else null
+
+  def setInputAvroMappings(value: util.Map[String, String]): Unit =
+    inputAvroMappings = value.asScala.toMap
+
   def validate(xsdConfig: Option[XSDConfig]): Unit = {
     if (Option(xmlInput) isDefined)
       if (xmlInput == "stdin") {
         streamingInput = true
-        if (Option(avroOutput).isEmpty || avroOutput == "stdout") streamingOutput = true
+        if (Option(avroOutput).isEmpty || avroOutput == "stdout")
+          streamingOutput = true
         else avroFile = Path(avroOutput)
       } else {
         xmlFile = Path(xmlInput)
         if (Option(avroOutput) isDefined) avroFile = Path(avroOutput)
         else avroFile = xmlFile changeExtension "avro"
-      }
-    else
+      } else
       throw ConversionError("XML Input is not specified in the config")
 
     if (baseDir.isDefined && !streamingInput)
@@ -173,6 +187,15 @@ class XMLConfig {
     }
 
     split.forEach(item => item.validate(baseDir))
+
+    if (useAvroInput) {
+      inputAvroMappings.foreach {
+        case (key, value) => if (value == "xmlInput") inputAvroKey = key
+      }
+
+      if (Option(inputAvroKey) isEmpty)
+        throw ConversionError("No xmlInput specified in inputAvroMappings")
+    }
   }
 }
 
@@ -195,12 +218,14 @@ class AvroSplit {
       ConversionError("Split by is not specified in the config")
 
     if (Option(avroFile) isEmpty)
-      ConversionError(s"Avro Output is not specified in the config for tag $by")
+      ConversionError(
+        s"Avro Output is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avroFile = avroFile toAbsoluteWithRoot baseDir.get
 
     if (Option(avscFile) isEmpty)
-      ConversionError(s"Avsc Schema is not specified in the config for tag $by")
+      ConversionError(
+        s"Avsc Schema is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avscFile = avscFile toAbsoluteWithRoot baseDir.get
   }
