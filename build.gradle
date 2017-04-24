@@ -11,7 +11,10 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-    maven { url "http://repo.maven.apache.org/maven2" }
+//    maven { url "http://repo.maven.apache.org/maven2" }
+    maven { url "http://hlxp0hdv05:9090/nexus/content/groups/public/" }
+    maven { url "http://hlxp0hdv05:9090/nexus/content/groups/external/" }
+    maven { url "http://hlxp0hdv05:9090/nexus/content/repositories/central/" }
 }
 
 dependencies {
