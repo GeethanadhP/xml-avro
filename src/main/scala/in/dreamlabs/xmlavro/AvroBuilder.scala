@@ -1,6 +1,7 @@
 package in.dreamlabs.xmlavro
 
 import java.io._
+import java.nio.ByteBuffer
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
 import javax.xml.stream.{XMLEventReader, XMLInputFactory}
@@ -10,8 +11,9 @@ import in.dreamlabs.xmlavro.RichAvro._
 import in.dreamlabs.xmlavro.XMLEvents.{addElement, eleStack, removeElement}
 import in.dreamlabs.xmlavro.config.XMLConfig
 import org.apache.avro.Schema
-import org.apache.avro.file.{CodecFactory, DataFileWriter}
+import org.apache.avro.file.{DataFileStream, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
+import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.specific.SpecificDatumWriter
 
 import scala.collection.JavaConverters._
@@ -23,17 +25,36 @@ import scala.collection.mutable
 class AvroBuilder(config: XMLConfig) {
   Utils.debugEnabled = config.debug
   RichAvro.caseSensitive = config.caseSensitive
-  RichAvro.ignoreCaseFor = config.ignoreCaseFor.asScala.toList.map(element => element.toLowerCase)
+  RichAvro.ignoreCaseFor =
+    config.ignoreCaseFor.asScala.toList.map(element => element.toLowerCase)
   RichAvro.ignoreMissing = config.ignoreMissing
   RichAvro.suppressWarnings = config.suppressWarnings
   XNode.namespaces = config.namespaces
   XMLDocument.config = config
 
   def createDatums(): Unit = {
-    val xmlIn =
+    val sourceInput =
       if (config.streamingInput) new BufferedInputStream(System.in)
       else config.xmlFile.toFile.bufferedInput()
 
+    if (config.useAvroInput) {
+      val avroReader = new DataFileStream[GenericRecord](
+        sourceInput,
+        new GenericDatumReader[GenericRecord]())
+      avroReader.forEach { record =>
+        val xmlIn = new BufferedInputStream(
+          new ByteArrayInputStream(record.get(config.inputAvroKey).asInstanceOf[ByteBuffer].array()))
+        createFromXML(xmlIn, Some(record))
+      }
+      avroReader.close()
+      sourceInput.close()
+    } else {
+      createFromXML(sourceInput)
+    }
+  }
+
+  def createFromXML(xmlIn: InputStream,
+                    sourceAvro: Option[GenericRecord] = None): Unit = {
     val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
     val writers = mutable.Map[String, DataFileWriter[Record]]()
     val schemas = mutable.Map[String, Schema]()
@@ -43,7 +64,7 @@ class AvroBuilder(config: XMLConfig) {
       val datumWriter = new SpecificDatumWriter[Record](schema)
       val fileWriter = new DataFileWriter[Record](datumWriter)
 
-      fileWriter setCodec (CodecFactory snappyCodec)
+      //      fileWriter setCodec (CodecFactory snappyCodec)
       val avroOut =
         if (split stream) new BufferedOutputStream(System.out)
         else split.avroFile.toFile.bufferedOutput()
@@ -122,9 +143,17 @@ class AvroBuilder(config: XMLConfig) {
                 proceed = true
                 event pop()
                 if (writers.contains(event.name)) {
+                  if (sourceAvro isDefined) {
+                    config.inputAvroMappings.foreach {
+                      case (source, target) => if (source != config.inputAvroKey) {
+                        splitRecord.put(target, sourceAvro.get.get(source))
+                      }
+                    }
+                  }
                   val writer = writers(event name)
                   writer append splitRecord
-                  Utils.info(s"Writing avro record for ${currentDoc.get.docText} split at ${event.name}")
+                  Utils.info(
+                    s"Writing avro record for ${currentDoc.get.docText} split at ${event.name}")
                   splitFound = false
                 }
               }
@@ -236,5 +265,3 @@ object AvroBuilder {
   private def unknown(message: String, event: XMLEvent) =
     Utils.warn(s"WARNING: Unknown $message: $event")
 }
-
-
