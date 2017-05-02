@@ -20,7 +20,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by Royce on 20/01/2017.
   */
-case class ConversionError(message: String = null, cause: Throwable = null)
+case class ConversionException(message: String = null, cause: Throwable = null)
   extends RuntimeException(message, cause) {
   def this(cause: Throwable) = this(null, cause)
 }
@@ -51,15 +51,15 @@ class XSDErrorHandler extends XMLErrorHandler with DOMErrorHandler {
   }
 
   def check(): Unit = {
-    if (exception isDefined) throw new ConversionError(exception.get)
+    if (exception isDefined) throw new ConversionException(exception.get)
     if (error isDefined) {
       error.get.getRelatedException match {
-        case cause: Throwable => throw new ConversionError(cause)
+        case cause: Throwable => throw new ConversionException(cause)
         case _ =>
       }
       val locator = error.get.getLocation
       val location = "at:" + locator.getUri + ", line:" + locator.getLineNumber + ", char:" + locator.getColumnNumber
-      throw ConversionError(location + " " + error.get.getMessage)
+      throw ConversionException(location + " " + error.get.getMessage)
     }
   }
 }
@@ -210,7 +210,7 @@ object AvroPath {
       if (ignoreMissing && !suppressWarnings)
         warn(message)
       else if (!ignoreMissing)
-        throw ConversionError(message)
+        throw ConversionException(message)
     }
   }
 }
@@ -232,7 +232,7 @@ object AvroUtils {
       case FLOAT => content.toFloat
       case DOUBLE => content.toDouble
       case STRING => content
-      case other => throw ConversionError(s"Unsupported type $other")
+      case other => throw ConversionException(s"Unsupported type $other")
     }
     result.asInstanceOf[AnyRef]
   }

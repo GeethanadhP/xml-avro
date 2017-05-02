@@ -74,7 +74,7 @@ final class SchemaBuilder(config: XSDConfig) {
       }
 
       if (tempSchemas isEmpty)
-        throw ConversionError("No root element declaration found")
+        throw ConversionException("No root element declaration found")
 
       // Create root record from the schemas generated
       if (tempSchemas.size == 1) tempSchemas.valuesIterator.next()
@@ -112,7 +112,7 @@ final class SchemaBuilder(config: XSDConfig) {
         val name = complexTypeName(eleType)
         debug(s"Creating schema for type $name")
         schemas.getOrElse(name, createRecord(name, eleType))
-      case others => throw ConversionError(s"Unknown Element type: $others")
+      case others => throw ConversionException(s"Unknown Element type: $others")
     }
     if (array)
       schema = Schema createArray schema
@@ -181,7 +181,7 @@ final class SchemaBuilder(config: XSDConfig) {
         case MODEL_GROUP =>
           fields ++= processGroup(innerTerm, optional, array)
         case _ =>
-          throw ConversionError(s"Unsupported term type ${group.getType}")
+          throw ConversionException(s"Unsupported term type ${group.getType}")
       }
     }
     fields
@@ -284,7 +284,7 @@ final class SchemaBuilder(config: XSDConfig) {
         val map = Schema.createMap(Schema.create(Schema.Type.STRING))
         new Field(XNode.WILDCARD, map, null, null)
       case _ =>
-        throw ConversionError("Invalid source object type " + ele.getType)
+        throw ConversionException("Invalid source object type " + ele.getType)
     }
     field
   }

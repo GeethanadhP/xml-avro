@@ -107,7 +107,7 @@ object XMLEvents {
     } else if (field isRecord)
       path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
     else if (!field.isPrimitive && !field.isMap)
-      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      throw ConversionException(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
     (path, field fieldSchema)
   }
 
@@ -123,7 +123,7 @@ object XMLEvents {
       schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
       lastSchema = field.fieldSchema
     } else if (!field.isPrimitive && !field.isMap)
-      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      throw ConversionException(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
   }
 }
 

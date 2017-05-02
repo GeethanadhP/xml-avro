@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro
 
-import java.io.{IOException, PipedReader, PipedWriter}
+import java.io.{IOException, PipedReader, PipedWriter, PrintWriter}
 import javax.xml.XMLConstants
 import javax.xml.stream.events.XMLEvent
 import javax.xml.stream.{XMLEventFactory, XMLEventWriter, XMLOutputFactory}
@@ -37,7 +37,7 @@ class XMLDocument(val id: Int, config: XMLConfig) {
     val parent = filePath.parent
     errorDataFile = Path(s"${fileName}_$id")
       .toAbsoluteWithRoot(parent)
-      .addExtension(filePath.extension)
+      .addExtension("xml")
       .toFile
     errorMetaFile = Path(s"${fileName}_$id")
       .toAbsoluteWithRoot(parent)
@@ -112,8 +112,7 @@ class XMLDocument(val id: Int, config: XMLConfig) {
         events.foreach(dataOut.add)
         dataOut.flush()
         dataOut.close()
-        val metaOut = errorMetaFile.bufferedWriter()
-        metaOut.write(reasons)
+        val metaOut = new PrintWriter(errorMetaFile.bufferedWriter())
         metaOut.flush()
         metaOut.close()
       }
