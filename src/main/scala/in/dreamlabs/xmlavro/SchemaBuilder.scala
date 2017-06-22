@@ -74,7 +74,7 @@ final class SchemaBuilder(config: XSDConfig) {
       }
 
       if (tempSchemas isEmpty)
-        throw ConversionError("No root element declaration found")
+        throw ConversionException("No root element declaration found")
 
       // Create root record from the schemas generated
       if (tempSchemas.size == 1) tempSchemas.valuesIterator.next()
@@ -112,7 +112,8 @@ final class SchemaBuilder(config: XSDConfig) {
         val name = complexTypeName(eleType)
         debug(s"Creating schema for type $name")
         schemas.getOrElse(name, createRecord(name, eleType))
-      case others => throw ConversionError(s"Unknown Element type: $others")
+      case others =>
+        throw ConversionException(s"Unknown Element type: $others")
     }
     if (array)
       schema = Schema createArray schema
@@ -181,7 +182,7 @@ final class SchemaBuilder(config: XSDConfig) {
         case MODEL_GROUP =>
           fields ++= processGroup(innerTerm, optional, array)
         case _ =>
-          throw ConversionError(s"Unsupported term type ${group.getType}")
+          throw ConversionException(s"Unsupported term type ${group.getType}")
       }
     }
     fields
@@ -284,7 +285,7 @@ final class SchemaBuilder(config: XSDConfig) {
         val map = Schema.createMap(Schema.create(Schema.Type.STRING))
         new Field(XNode.WILDCARD, map, null, null)
       case _ =>
-        throw ConversionError("Invalid source object type " + ele.getType)
+        throw ConversionException("Invalid source object type " + ele.getType)
     }
     field
   }
@@ -347,8 +348,8 @@ final class SchemaBuilder(config: XSDConfig) {
 
   private def primaryType(schemaType: XSTypeDefinition): Schema.Type = {
     val avroType = SchemaBuilder.PRIMITIVES get schemaType
-        .asInstanceOf[XSSimpleTypeDefinition]
-        .getBuiltInKind
+      .asInstanceOf[XSSimpleTypeDefinition]
+      .getBuiltInKind
     if (avroType isEmpty) Schema.Type.STRING
     else avroType.get
   }
@@ -398,7 +399,128 @@ object SchemaBuilder {
     XSConstants.STRING_DT -> Schema.Type.STRING
   )
   val HIVE_KEYWORDS: List[String] =
-    List("EXCHANGE", "OVER", "TIMESTAMP", "DATETIME")
+    List(
+      "ALL",
+      "ALTER",
+      "AND",
+      "ARRAY",
+      "AS",
+      "AUTHORIZATION",
+      "BETWEEN",
+      "BIGINT",
+      "BINARY",
+      "BOOLEAN",
+      "BOTH",
+      "BY",
+      "CASE",
+      "CAST",
+      "CHAR",
+      "COLUMN",
+      "COLUMNS",
+      "CONF",
+      "CREATE",
+      "CROSS",
+      "CUBE",
+      "CURRENT",
+      "CURRENT_DATE",
+      "CURRENT_TIMESTAMP",
+      "CURSOR",
+      "DATABASE",
+      "DATE",
+      "DATETIME",
+      "DECIMAL",
+      "DELETE",
+      "DESCRIBE",
+      "DISTINCT",
+      "DOUBLE",
+      "DROP",
+      "ELSE",
+      "END",
+      "EXCHANGE",
+      "EXISTS",
+      "EXTENDED",
+      "EXTERNAL",
+      "FALSE",
+      "FETCH",
+      "FLOAT",
+      "FOLLOWING",
+      "FOR",
+      "FROM",
+      "FULL",
+      "FUNCTION",
+      "GRANT",
+      "GROUP",
+      "GROUPING",
+      "HAVING",
+      "IF",
+      "IMPORT",
+      "IN",
+      "INNER",
+      "INSERT",
+      "INT",
+      "INTERSECT",
+      "INTERVAL",
+      "INTO",
+      "IS",
+      "JOIN",
+      "LATERAL",
+      "LEFT",
+      "LESS",
+      "LIKE",
+      "LOCAL",
+      "MACRO",
+      "MAP",
+      "MORE",
+      "NONE",
+      "NOT",
+      "NULL",
+      "OF",
+      "ON",
+      "OR",
+      "ORDER",
+      "OUT",
+      "OUTER",
+      "OVER",
+      "PARTIALSCAN",
+      "PARTITION",
+      "PERCENT",
+      "PRECEDING",
+      "PRESERVE",
+      "PROCEDURE",
+      "RANGE",
+      "READS",
+      "REDUCE",
+      "REVOKE",
+      "RIGHT",
+      "ROLLUP",
+      "ROW",
+      "ROWS",
+      "SELECT",
+      "SET",
+      "SMALLINT",
+      "TABLE",
+      "TABLESAMPLE",
+      "THEN",
+      "TIMESTAMP",
+      "TO",
+      "TRANSFORM",
+      "TRIGGER",
+      "TRUE",
+      "TRUNCATE",
+      "UNBOUNDED",
+      "UNION",
+      "UNIQUEJOIN",
+      "UPDATE",
+      "USER",
+      "USING",
+      "UTC_TMESTAMP",
+      "VALUES",
+      "VARCHAR",
+      "WHEN",
+      "WHERE",
+      "WINDOW",
+      "WITH"
+    )
 
   def apply(config: XSDConfig) = new SchemaBuilder(config)
 }

@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'scala'
 
 group = 'in.dreamlabs'
-version = '1.7.0'
+version = '1.7.3'
 
 description = "A simple tool to convert xml to avro and their respective schemas"
 
@@ -11,11 +11,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-//    maven { url "http://repo.maven.apache.org/maven2" }
-    maven { url "http://hlxp0hdv05:9090/nexus/content/groups/public/" }
-    maven { url "http://hlxp0hdv05:9090/nexus/content/groups/external/" }
-    maven { url "http://hlxp0hdv05:9090/nexus/content/repositories/central/" }
-}
+    maven { url "http://repo.maven.apache.org/maven2" } }
 
 dependencies {
     compile 'org.scala-lang:scala-library:2.12.1'

@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro.config
 
 import java.util
 
-import in.dreamlabs.xmlavro.ConversionError
+import in.dreamlabs.xmlavro.ConversionException
 import in.dreamlabs.xmlavro.Utils.option
 
 import scala.beans.BeanProperty
@@ -104,6 +104,7 @@ class XMLConfig {
   @BeanProperty var useAvroInput: Boolean = false
   var inputAvroMappings: Map[String, String] = _
   var inputAvroKey: String = _
+  var inputAvroUniqueKey: Option[String] = None
 
 
   def getQaDir: String = if (qaDir isDefined) qaDir.get.path else null
@@ -148,7 +149,7 @@ class XMLConfig {
         if (Option(avroOutput) isDefined) avroFile = Path(avroOutput)
         else avroFile = xmlFile changeExtension "avro"
       } else
-      throw ConversionError("XML Input is not specified in the config")
+      throw ConversionException("XML Input is not specified in the config")
 
     if (baseDir.isDefined && !streamingInput)
       xmlFile = xmlFile toAbsoluteWithRoot baseDir.get
@@ -172,7 +173,7 @@ class XMLConfig {
       errorFile = Option(errorFile.get.toAbsoluteWithRoot(baseDir.get))
 
     if (Option(documentRootTag) isEmpty)
-      throw ConversionError("Document Root Tag is not specified in the config")
+      throw ConversionException("Document Root Tag is not specified in the config")
 
     if (option(splitBy) isEmpty)
       splitBy = documentRootTag
@@ -190,11 +191,13 @@ class XMLConfig {
 
     if (useAvroInput) {
       inputAvroMappings.foreach {
-        case (key, value) => if (value == "xmlInput") inputAvroKey = key
+        case (key, value) =>
+          if (value == "xmlInput") inputAvroKey = key
+          else if (value == "unique_id") inputAvroUniqueKey = Option(key)
       }
 
       if (Option(inputAvroKey) isEmpty)
-        throw ConversionError("No xmlInput specified in inputAvroMappings")
+        throw ConversionException("No xmlInput specified in inputAvroMappings")
     }
   }
 }
@@ -215,16 +218,16 @@ class AvroSplit {
 
   def validate(baseDir: Option[Path]): Unit = {
     if (option(by) isEmpty)
-      ConversionError("Split by is not specified in the config")
+      ConversionException("Split by is not specified in the config")
 
     if (Option(avroFile) isEmpty)
-      ConversionError(
+      ConversionException(
         s"Avro Output is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avroFile = avroFile toAbsoluteWithRoot baseDir.get
 
     if (Option(avscFile) isEmpty)
-      ConversionError(
+      ConversionException(
         s"Avsc Schema is not specified in the config for tag $by")
     else if (baseDir isDefined)
       avscFile = avscFile toAbsoluteWithRoot baseDir.get

@@ -1,6 +1,6 @@
 package in.dreamlabs.xmlavro.config
 
-import in.dreamlabs.xmlavro.ConversionError
+import in.dreamlabs.xmlavro.ConversionException
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -90,7 +90,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
         tempMatch =>
           try line = line.replace(tempMatch.matched, sys.env(tempMatch.group(1)))
           catch {
-            case _: NoSuchElementException => throw ConversionError(tempMatch.group(1) + " is not found in the environment variables")
+            case _: NoSuchElementException => throw ConversionException(tempMatch.group(1) + " is not found in the environment variables")
           }
       }
       configData append line + "\n"

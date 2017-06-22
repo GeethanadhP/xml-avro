@@ -34,7 +34,7 @@ object XMLEvents {
     eleStack.insert(0, node)
     var found = false
     if (eleStack.size != 1) {
-      val (field, path, schema) = searchField(lastSchema, node)
+      val (field, path, _) = searchField(lastSchema, node)
       if (field isDefined) {
         schemaPath ++= path.reverse
         updatePath(field.get)
@@ -49,16 +49,25 @@ object XMLEvents {
     eleStack.remove(0)
     var count = schemaPath.size
     if (count != 0) {
-      if (schemaPath.last.name == node.name) {
-        count = destroyLastPath()
-        while (count != 0 && schemaPath.last.virtual) {
+      if (SchemaBuilder.HIVE_KEYWORDS.contains(node.name.toUpperCase)) {
+        if (schemaPath.last.name == s"${node.name}_value") {
           count = destroyLastPath()
+          while (count != 0 && schemaPath.last.virtual) {
+            count = destroyLastPath()
+          }
         }
-      } else if (schemaPath.last.name.startsWith("type"))
-        while (count != 0 && schemaPath.last.virtual) {
+      } else {
+        if (schemaPath.last.name == node.name) {
           count = destroyLastPath()
-        }
-      lastSchema = rootRecord.at(schemaPath.toList).getSchema
+          while (count != 0 && schemaPath.last.virtual) {
+            count = destroyLastPath()
+          }
+        } else if (schemaPath.last.name.startsWith("type"))
+          while (count != 0 && schemaPath.last.virtual) {
+            count = destroyLastPath()
+          }
+        lastSchema = rootRecord.at(schemaPath.toList).getSchema
+      }
     }
   }
 
@@ -107,7 +116,7 @@ object XMLEvents {
     } else if (field isRecord)
       path += AvroPath(name, RECORD, schemaPath ++ path.reverse, virtual)
     else if (!field.isPrimitive && !field.isMap)
-      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      throw ConversionException(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
     (path, field fieldSchema)
   }
 
@@ -123,7 +132,7 @@ object XMLEvents {
       schemaPath += AvroPath(name, RECORD, schemaPath, virtual)
       lastSchema = field.fieldSchema
     } else if (!field.isPrimitive && !field.isMap)
-      throw ConversionError(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
+      throw ConversionException(s"WARNING: 2 - Unknown type ${field.fieldType} for $name")
   }
 }
 
