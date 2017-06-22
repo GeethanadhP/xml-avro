@@ -104,6 +104,7 @@ class XMLConfig {
   @BeanProperty var useAvroInput: Boolean = false
   var inputAvroMappings: Map[String, String] = _
   var inputAvroKey: String = _
+  var inputAvroUniqueKey: Option[String] = None
 
 
   def getQaDir: String = if (qaDir isDefined) qaDir.get.path else null
@@ -190,7 +191,9 @@ class XMLConfig {
 
     if (useAvroInput) {
       inputAvroMappings.foreach {
-        case (key, value) => if (value == "xmlInput") inputAvroKey = key
+        case (key, value) =>
+          if (value == "xmlInput") inputAvroKey = key
+          else if (value == "unique_id") inputAvroUniqueKey = Option(key)
       }
 
       if (Option(inputAvroKey) isEmpty)

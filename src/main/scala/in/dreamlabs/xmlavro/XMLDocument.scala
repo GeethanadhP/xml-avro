@@ -17,7 +17,7 @@ import scala.reflect.io.{File, Path}
 /**
   * Created by Royce on 06/03/2017.
   */
-class XMLDocument(val id: Int, config: XMLConfig) {
+class XMLDocument(val id: Int, val uniqueKey: Option[String], config: XMLConfig) {
   private val events = mutable.ListBuffer[XMLEvent]()
   @volatile var error = false
   private var exceptionList: mutable.ListBuffer[Exception] =
@@ -27,19 +27,24 @@ class XMLDocument(val id: Int, config: XMLConfig) {
   private var eventOut: XMLEventWriter = _
   private var errorDataFile, errorMetaFile: File = _
   private val locker: AnyRef = new AnyRef
-  val docText = s"document #$id"
+  val docText = s"document #$id${
+    if (uniqueKey.isDefined)
+      s" with Unique ID: \'${uniqueKey.get.toString}\'"
+    else ""
+  }"
 
   info("Processing " + docText)
 
   if (config.errorFile isDefined) {
     val filePath = config.errorFile.get
     val fileName = filePath.stripExtension
+    val fileSuffix = if (uniqueKey isDefined) s"${id}__${uniqueKey.get}" else s"$id"
     val parent = filePath.parent
-    errorDataFile = Path(s"${fileName}_$id")
+    errorDataFile = Path(s"${fileName}__$fileSuffix")
       .toAbsoluteWithRoot(parent)
       .addExtension("xml")
       .toFile
-    errorMetaFile = Path(s"${fileName}_$id")
+    errorMetaFile = Path(s"${fileName}__$fileSuffix")
       .toAbsoluteWithRoot(parent)
       .addExtension("MD")
       .toFile
@@ -54,7 +59,9 @@ class XMLDocument(val id: Int, config: XMLConfig) {
         val validator = XMLDocument.schema.newValidator()
         try validator.validate(new StreamSource(pipeIn))
         catch {
-          case e: SAXParseException => fail(e)
+          case e: SAXParseException =>
+            val message =  s"XSD validation failed - Line: ${e.getLineNumber}, Column: ${e.getColumnNumber}, Message: ${e.getMessage}"
+            fail(ConversionException(message))
           case e: Exception =>
             warn("Exception in thread: " + e.getMessage)
             fail(e)
@@ -113,6 +120,7 @@ class XMLDocument(val id: Int, config: XMLConfig) {
         dataOut.flush()
         dataOut.close()
         val metaOut = new PrintWriter(errorMetaFile.bufferedWriter())
+        metaOut.write(reasons)
         metaOut.flush()
         metaOut.close()
       }
@@ -150,7 +158,7 @@ object XMLDocument {
   private var count: Int = 0
   var config: XMLConfig = _
 
-  def apply(): XMLDocument = {
+  def apply(uniqueKey: Option[String]): XMLDocument = {
     if (count == 0 && config.errorFile.isDefined) {
       config.errorFile.get.delete()
     }
@@ -159,7 +167,7 @@ object XMLDocument {
       schema = SchemaFactory
         .newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
         .newSchema(config.validationXSD.get.jfile)
-    new XMLDocument(count, config)
+    new XMLDocument(count, uniqueKey, config)
   }
 
   def closeAll(): Unit = {
@@ -176,8 +184,7 @@ object XMLDocument {
         docCountOut.close()
       } catch {
         case e: IOException =>
-          warn(
-            "Problem occurred while writing DOCUMENT_COUNT to QA DIR :" + e.getMessage)
+          warn("Problem occurred while writing DOCUMENT_COUNT to QA DIR :" + e.getMessage)
       }
     }
   }

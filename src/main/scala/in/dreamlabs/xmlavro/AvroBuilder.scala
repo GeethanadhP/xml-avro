@@ -2,6 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.io._
 import java.nio.ByteBuffer
+import java.util
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream.events.{Attribute, EndElement, StartElement, XMLEvent}
@@ -36,7 +37,6 @@ class AvroBuilder(config: XMLConfig) {
   private val schemas = mutable.Map[String, Schema]()
   private val streams = mutable.ListBuffer[OutputStream]()
 
-
   def createDatums(): Unit = {
     config.split.forEach { split =>
       val schema = new Schema.Parser().parse(split.avscFile.jfile)
@@ -62,8 +62,22 @@ class AvroBuilder(config: XMLConfig) {
         new GenericDatumReader[GenericRecord]())
       avroReader.forEach { record =>
         val xmlIn = new BufferedInputStream(
-          new ByteArrayInputStream(record.get(config.inputAvroKey).asInstanceOf[ByteBuffer].array()))
-        createFromXML(xmlIn, Some(record))
+          new ByteArrayInputStream(
+            record.get(config.inputAvroKey).asInstanceOf[ByteBuffer].array()))
+        var uniqueKey = if (config.inputAvroUniqueKey isDefined) {
+          val keys = config.inputAvroUniqueKey.get.split('.')
+          val valueMap =
+            record.get(keys(0)).asInstanceOf[util.HashMap[AnyRef, AnyRef]]
+          var found: Option[String] = None
+          valueMap.forEach {
+            case (key, value) =>
+              if (key.toString.equals(keys(1))) {
+                found = Some(value.toString)
+              }
+          }
+          found
+        } else None
+        createFromXML(xmlIn, Some(record), uniqueKey)
       }
       avroReader.close()
       sourceInput.close()
@@ -75,13 +89,14 @@ class AvroBuilder(config: XMLConfig) {
       writer.flush()
       writer.close()
     }
+
     streams.foreach(_.close())
   }
 
   def createFromXML(xmlIn: InputStream,
-                    sourceAvro: Option[GenericRecord] = None): Unit = {
+                    sourceAvro: Option[GenericRecord] = None,
+                    uniqueKey: Option[String] = None): Unit = {
     val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
-
     var splitRecord: Record = null
     var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
@@ -97,10 +112,14 @@ class AvroBuilder(config: XMLConfig) {
         case e: Exception =>
           currentDoc match {
             case None =>
-              Utils.log(config.docErrorLevel, s"No XML data received, ${e.getMessage} ")
+              Utils.log(config.docErrorLevel,
+                s"No XML data received, ${e.getMessage} ")
               return
             case Some(doc) =>
-              doc.fail(ConversionException(s"Invalid XML received, ${e.getMessage} ", e), wait = true)
+              doc.fail(
+                ConversionException(s"Invalid XML received, ${e.getMessage} ",
+                  e),
+                wait = true)
               documentFound = false
               currentDoc.get close()
               currentDoc = None
@@ -124,7 +143,7 @@ class AvroBuilder(config: XMLConfig) {
                 documentFound = true
                 proceed = true
                 splitFound = false
-                currentDoc = Some(XMLDocument())
+                currentDoc = Some(XMLDocument(uniqueKey))
                 currentDoc.get add event
               }
 
@@ -171,9 +190,10 @@ class AvroBuilder(config: XMLConfig) {
                   if (writers.contains(event.name)) {
                     if (sourceAvro isDefined) {
                       config.inputAvroMappings.foreach {
-                        case (source, target) => if (source != config.inputAvroKey) {
-                          splitRecord.put(target, sourceAvro.get.get(source))
-                        }
+                        case (source, target) =>
+                          if ((source != config.inputAvroKey) && !config.inputAvroUniqueKey.contains(source)) {
+                            splitRecord.put(target, sourceAvro.get.get(source))
+                          }
                       }
                     }
                     val writer = writers(event name)
@@ -184,13 +204,17 @@ class AvroBuilder(config: XMLConfig) {
                   }
                 }
               }
+            case COMMENT => // Do nothing
             case other => unknown(other.toString, event)
           }
         } catch {
           case e: Exception =>
             currentDoc match {
               case None => throw new ConversionException(e)
-              case Some(doc) => doc.fail(e, wait = true)
+              case Some(doc) =>
+                var innerMessage = s"'${event.toString}' after ${prevEvent.toString} at Line: ${event.getLocation.getLineNumber}, Column: ${event.getLocation.getColumnNumber}"
+                val message = s"${e.toString} occurred while processing $innerMessage"
+                doc.fail(ConversionException(message), wait = true)
             }
             proceed = false
         } finally {

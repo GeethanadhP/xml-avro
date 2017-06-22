@@ -59,9 +59,10 @@ XML:                            # Convert XML
   docErrorLevel: "WARNING"      # Use this level to log in case of error in a document 
   errorFile: "failures.xml"     # Writes the failed documents to this file
   useAvroInput: true            # Read xml data from inside an avro file
-  inputAvroMappings:            # Set of mappings from source field name to target, use "xmlInput" as target to mark it as the xml data
+  inputAvroMappings:            # Set of mappings from source field name to target, use "xmlInput" as target to mark it as the xml data, use "unique_id" as target to mark the value as unique key
       "headers" : "avroHeader"
       "body" : "xmlInput"
+      "headers.unique_id" : "unique_id"
 XSD:
   xsdFile: "somefile.xsd"       # Source of XSD
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
