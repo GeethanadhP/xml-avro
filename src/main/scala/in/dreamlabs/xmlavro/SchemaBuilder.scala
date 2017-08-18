@@ -398,6 +398,7 @@ object SchemaBuilder {
     XSConstants.DATETIME_DT -> Schema.Type.LONG,
     XSConstants.STRING_DT -> Schema.Type.STRING
   )
+
   val HIVE_KEYWORDS: List[String] =
     List(
       "ALL",
