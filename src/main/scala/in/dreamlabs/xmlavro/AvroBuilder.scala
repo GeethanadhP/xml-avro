@@ -160,7 +160,7 @@ class AvroBuilder(config: XMLConfig) {
                 }
                 if (splitFound && proceed) {
                   proceed = event push()
-                  parentEle = event.name
+                  parentEle = event.fullName
                   if (event.hasAttributes && proceed) {
                     val record = splitRecord.at(event path)
                     event.attributes foreach {
@@ -184,7 +184,7 @@ class AvroBuilder(config: XMLConfig) {
                 }
               }
               if (currentDoc.isDefined && !currentDoc.get.error) {
-                if (splitFound && (proceed || event.name == parentEle)) {
+                if (splitFound && (proceed || event.fullName == parentEle)) {
                   proceed = true
                   event pop()
                   if (writers.contains(event.name)) {
@@ -288,6 +288,10 @@ class AvroBuilder(config: XMLConfig) {
       if (startEle isDefined) startEle.get.getName.getLocalPart
       else if (endEle isDefined) endEle.get.getName.getLocalPart
       else element.name
+
+    def fullName: String = {
+      XNode(name, nsURI, nsName, attribute = false).fullName()
+    }
 
     def pop(): Unit =
       removeElement(XNode(name, nsURI, nsName, attribute = false))
