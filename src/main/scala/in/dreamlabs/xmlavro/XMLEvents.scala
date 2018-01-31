@@ -1,5 +1,6 @@
 package in.dreamlabs.xmlavro
 
+import in.dreamlabs.xmlavro
 import in.dreamlabs.xmlavro.RichAvro._
 import in.dreamlabs.xmlavro.Utils._
 import org.apache.avro.Schema
@@ -33,7 +34,7 @@ object XMLEvents {
   def addElement(node: XNode): Boolean = {
     eleStack.insert(0, node)
     var found = false
-    if (eleStack.size != 1) {
+    if (eleStack.lengthCompare(1) != 0) {
       val (field, path, _) = searchField(lastSchema, node)
       if (field isDefined) {
         schemaPath ++= path.reverse
@@ -46,6 +47,9 @@ object XMLEvents {
   }
 
   def removeElement(node: XNode): Unit = {
+    if (node.name != eleStack.head.name)
+      throw ConversionException("No. of closing tags is not matching opening tags, contact the developer")
+
     eleStack.remove(0)
     var count = schemaPath.size
     if (count != 0) {
