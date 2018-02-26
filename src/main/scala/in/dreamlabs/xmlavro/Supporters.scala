@@ -183,7 +183,7 @@ class AvroPath(val name: String,
 
 object AvroPath {
   val countsMap: mutable.Map[String, Int] = mutable.Map[String, Int]()
-  val missingNodes: ListBuffer[String] = ListBuffer[String]()
+  val warnedNodes: ListBuffer[String] = ListBuffer[String]()
 
   def apply(name: String,
             pathType: Type,
@@ -194,6 +194,7 @@ object AvroPath {
   def reset(): Unit = countsMap.clear()
 
   def missing(eleStack: ListBuffer[XNode], node: XNode = null): Unit = {
+
     val builder = StringBuilder.newBuilder
     var missingStack = eleStack
     var missingNode = node
@@ -201,17 +202,37 @@ object AvroPath {
       missingStack = eleStack.tail
       missingNode = eleStack.head
     }
-    missingStack.reverse.foreach(ele => builder append s"$ele/")
-    builder.append(s"${if (missingNode attribute) "@" else ""}${missingNode name}")
-    val fullNode = builder.mkString
-    if (!missingNodes.contains(fullNode)) {
-      missingNodes += fullNode
-      val message = s"$fullNode is not found in Schema (even as a wildcard)"
-      if (ignoreMissing && !suppressWarnings)
-        warn(message)
-      else if (!ignoreMissing)
-        throw ConversionException(message)
+
+    val ignoreList = List("noNamespaceSchemaLocation")
+    if (!ignoreList.contains(missingNode.name)) {
+      missingStack.reverse.foreach(ele => builder append s"$ele/")
+      builder.append(s"${if (missingNode attribute) "@" else ""}${missingNode name}")
+      val fullNode = builder.mkString
+      if (!warnedNodes.contains(fullNode)) {
+        warnedNodes += fullNode
+        val message = s"$fullNode is not found in Schema (even as a wildcard)"
+        if (ignoreMissing && !suppressWarnings)
+          warn(message)
+        else if (!ignoreMissing)
+          throw ConversionException(message)
+      }
     }
+  }
+
+  def warning(eleStack: ListBuffer[XNode], message: String):Unit={
+    val builder = StringBuilder.newBuilder
+    builder.append("In path ")
+    eleStack.reverse.foreach(ele => builder append s"$ele/")
+    builder.append(", ")
+    builder.append(message)
+    val finalMessage = builder.mkString
+    if (!warnedNodes.contains(finalMessage)) {
+      warnedNodes += finalMessage
+    if (!suppressWarnings)
+      warn(finalMessage)
+    else
+      throw ConversionException(finalMessage)
+  }
   }
 }
 
@@ -267,7 +288,9 @@ object Utils {
 
   def warn(text: String): Unit = log("WARNING", text)
 
-  def log(level: String, text: String): Unit = System.err.println(s"${Calendar.getInstance().getTime} ${level.toUpperCase}: $text")
+  def log(level: String, text: String, duplicates:Boolean = true): Unit = {
+    System.err.println(s"${Calendar.getInstance().getTime} ${level.toUpperCase}: $text")
+  }
 
   def profile(tag: String)(op: => Unit): Unit = {
     val start = Calendar.getInstance().getTimeInMillis

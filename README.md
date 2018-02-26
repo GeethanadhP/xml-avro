@@ -36,7 +36,7 @@ namespaces: true                # Enable/Disable usage of namespaces in schema/c
 XML:                            # Convert XML
   xmlInput: stdin               # Source of XML [ stdin | "somefile.xml" ]
   avscFile: "books.avsc"        # Avsc file to use for conversion - (If not using splits)
-  avroInput: stdout             # Traget location [ stdout | "somefile.avro" ] - Optional (Uses the xmlInput to assume the output) (If not using splits)
+  avroOutput: stdout             # Traget location [ stdout | "somefile.avro" ] - Optional (Uses the xmlInput to assume the output) (If not using splits)
   documentRootTag: "books"      # Root tag of the XML (without namespace)
   validationXSD: "books.xsd"    # Enable validation with specified xsd
   ignoreMissing: true           # Incase you use a smaller version of avsc (to take only required tags),

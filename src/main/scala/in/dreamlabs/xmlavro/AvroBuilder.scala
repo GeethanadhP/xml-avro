@@ -16,7 +16,7 @@ import org.apache.avro.file.{CodecFactory, DataFileStream, DataFileWriter}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.specific.SpecificDatumWriter
-
+import in.dreamlabs.xmlavro.Utils.info
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -60,6 +60,7 @@ class AvroBuilder(config: XMLConfig) {
       val avroReader = new DataFileStream[GenericRecord](
         sourceInput,
         new GenericDatumReader[GenericRecord]())
+      var avroCount = 0
       avroReader.forEach { record =>
         val xmlIn = new BufferedInputStream(
           new ByteArrayInputStream(
@@ -77,7 +78,10 @@ class AvroBuilder(config: XMLConfig) {
           }
           found
         } else None
+        avroCount+=1
+        info(s"Loading avro record #$avroCount for Unique ID: ${uniqueKey}")
         createFromXML(xmlIn, Some(record), uniqueKey)
+        info(s"Finished avro record #$avroCount for Unique ID: ${uniqueKey}")
       }
       avroReader.close()
       sourceInput.close()
