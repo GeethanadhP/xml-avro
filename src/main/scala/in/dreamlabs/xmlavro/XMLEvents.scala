@@ -33,6 +33,7 @@ object XMLEvents {
 
   def addElement(node: XNode): Boolean = {
     eleStack.insert(0, node)
+
     var found = false
     if (eleStack.lengthCompare(1) != 0) {
       val (field, path, _) = searchField(lastSchema, node)
@@ -59,6 +60,15 @@ object XMLEvents {
           while (count != 0 && schemaPath.last.virtual) {
             count = destroyLastPath()
           }
+        } else {
+          AvroPath.warning(eleStack, s"${node.name} found in the XML is a Hive keyword, " +
+            s"but the avsc schema is not modified to fix any possible issues, " +
+            s"please consider updating it to ${node.name}_value or re-create the avsc with latest jar. " +
+            s"If you updated the avsc make sure you update your table schema as well")
+          count = destroyLastPath()
+          while (count != 0 && schemaPath.last.virtual) {
+            count = destroyLastPath()
+          }
         }
       } else {
         if (schemaPath.last.name == node.name) {
@@ -70,8 +80,8 @@ object XMLEvents {
           while (count != 0 && schemaPath.last.virtual) {
             count = destroyLastPath()
           }
-        lastSchema = rootRecord.at(schemaPath.toList).getSchema
       }
+      lastSchema = rootRecord.at(schemaPath.toList).getSchema
     }
   }
 
