@@ -117,7 +117,9 @@ trait RichAvro {
       breakable {
         tempSchema.getFields.forEach { field =>
           val sourceField = field.getProp(XNode.SOURCE)
-          if (node sourceMatches(sourceField, caseSensitive, ignoreCaseFor)) {
+          if (Option(sourceField).isEmpty && field.name() == XNode.WILDCARD)
+            break
+          else if (node sourceMatches(sourceField, caseSensitive, ignoreCaseFor)) {
             resultField = Some(field)
             break
           }
