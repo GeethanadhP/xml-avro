@@ -55,23 +55,18 @@ object XMLEvents {
     var count = schemaPath.size
     if (count != 0) {
       if (SchemaBuilder.HIVE_KEYWORDS.contains(node.name.toUpperCase)) {
-        if (schemaPath.last.name == s"${node.name}_value") {
-          count = destroyLastPath()
-          while (count != 0 && schemaPath.last.virtual) {
-            count = destroyLastPath()
-          }
-        } else {
+        if (schemaPath.last.name != s"${node.name}_value" && Option(lastSchema.getField(s"${node.name}_value")).isEmpty) {
           AvroPath.warning(eleStack, s"${node.name} found in the XML is a Hive keyword, " +
             s"but the avsc schema is not modified to fix any possible issues, " +
             s"please consider updating it to ${node.name}_value or re-create the avsc with latest jar. " +
             s"If you updated the avsc make sure you update your table schema as well")
+        }
+        count = destroyLastPath()
+        while (count != 0 && schemaPath.last.virtual) {
           count = destroyLastPath()
-          while (count != 0 && schemaPath.last.virtual) {
-            count = destroyLastPath()
-          }
         }
       } else {
-        if (schemaPath.last.name == node.name) {
+        if (schemaPath.last.name == node.name && node.name != eleStack.head.name) { //Complex tag closing
           count = destroyLastPath()
           while (count != 0 && schemaPath.last.virtual) {
             count = destroyLastPath()
