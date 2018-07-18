@@ -7,21 +7,14 @@ import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
 import org.apache.xerces.dom.DOMInputImpl
 import org.apache.xerces.impl.Constants
-import org.apache.xerces.impl.xs.{
-  SchemaGrammar,
-  XMLSchemaLoader,
-  XSComplexTypeDecl
-}
+import org.apache.xerces.impl.xs.{SchemaGrammar, XMLSchemaLoader, XSComplexTypeDecl}
 import org.apache.xerces.xni.parser.{XMLEntityResolver, XMLInputSource}
 import org.apache.xerces.xni.{XMLResourceIdentifier, XNIException}
-import org.apache.xerces.xs.XSConstants.{
-  ATTRIBUTE_DECLARATION,
-  ELEMENT_DECLARATION,
-  MODEL_GROUP,
-  WILDCARD
-}
+import org.apache.xerces.xs.XSConstants.{ATTRIBUTE_DECLARATION, ELEMENT_DECLARATION, MODEL_GROUP, WILDCARD}
 import org.apache.xerces.xs.XSTypeDefinition.{COMPLEX_TYPE, SIMPLE_TYPE}
 import org.apache.xerces.xs._
+import org.codehaus.jackson.JsonNode
+import org.codehaus.jackson.node.NullNode
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -268,10 +261,13 @@ final class SchemaBuilder(config: XSDConfig) {
           case ATTRIBUTE_DECLARATION =>
             (ele.asInstanceOf[XSAttributeDeclaration].getTypeDefinition, true)
         }
+
         val fieldSchema: Schema = processType(eleType, optional, array)
+        val defaultValue: JsonNode = if (optional) NullNode.getInstance() else null
 
         val field: Field =
-          new Field(validName(ele.getName).get, fieldSchema, null, null)
+          new Field(validName(ele.getName).get, fieldSchema, null, defaultValue)
+
         field.addProp(XNode.SOURCE, XNode(ele, attribute).source)
 
         if (eleType.getTypeCategory == SIMPLE_TYPE) {
