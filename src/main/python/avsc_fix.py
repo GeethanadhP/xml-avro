@@ -1,7 +1,8 @@
 import json
-import os
 import sys
 from collections import OrderedDict
+
+import os
 
 
 class AvroSchema:
@@ -104,7 +105,10 @@ class AvroSchema:
                         inner_type['items'] = self._generate_schema(
                             node.content)
                         schema['name'] = node.name
-                        schema['type'] = inner_type
+                        if node.optional:
+                            schema['type'] = ['null', inner_type]
+                        else:
+                            schema['type'] = inner_type
                         schema['source'] = node.source
                     # Map
                     elif sql_type == 'MAP':
@@ -274,5 +278,6 @@ class Node:
 
 
 file_path = sys.argv[1]
+split_by = sys.argv[2]
 temp = AvroSchema(file_path)
-temp.recreate_schema(split_by="inventoryReportMessage", new_file=file_path)
+temp.recreate_schema(split_by=split_by, new_file=file_path)
