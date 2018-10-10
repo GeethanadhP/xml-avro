@@ -59,7 +59,7 @@ trait RichAvro {
       if (fieldOp isEmpty) {
         fieldOp = schema wildcard (node attribute)
         if (fieldOp isDefined) wildcard = true
-        else
+        else if (value.trim() != "")
           AvroPath.missing(XMLEvents.eleStack, node)
       }
       if (fieldOp isDefined) {
@@ -69,9 +69,9 @@ trait RichAvro {
           val wildField =
             record.get(field name).asInstanceOf[util.Map[String, AnyRef]]
           val existingVal = wildField.get(node name)
-          if(Option(existingVal) isEmpty)
+          if (Option(existingVal) isEmpty)
             wildField.put(node name, value)
-          else{
+          else {
             existingVal match {
               case existingList: util.ArrayList[AnyRef] =>
                 existingList.add(value)

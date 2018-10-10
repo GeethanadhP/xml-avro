@@ -46,7 +46,7 @@ class AvroBuilder(config: XMLConfig) {
       val avroOut =
         if (split stream) new BufferedOutputStream(System.out)
         else split.avroFile.toFile.bufferedOutput()
-      fileWriter create (schema, avroOut)
+      fileWriter create(schema, avroOut)
       streams += avroOut
       writers += split.by -> fileWriter
       schemas += split.by -> schema
@@ -119,15 +119,15 @@ class AvroBuilder(config: XMLConfig) {
           currentDoc match {
             case None =>
               Utils.log(config.docErrorLevel,
-                        s"No XML data received, ${e.getMessage} ")
+                s"No XML data received, ${e.getMessage} ")
               return
             case Some(doc) =>
               doc.fail(
                 ConversionException(s"Invalid XML received, ${e.getMessage} ",
-                                    e),
+                  e),
                 wait = true)
               documentFound = false
-              currentDoc.get close ()
+              currentDoc.get close()
               currentDoc = None
               return
           }
@@ -165,7 +165,7 @@ class AvroBuilder(config: XMLConfig) {
                   proceed = true
                 }
                 if (splitFound && proceed) {
-                  proceed = event push ()
+                  proceed = event push()
                   parentEle = event.fullName
                   if (event.hasAttributes && proceed) {
                     val record = splitRecord.at(event path)
@@ -192,13 +192,13 @@ class AvroBuilder(config: XMLConfig) {
               if (currentDoc.isDefined && !currentDoc.get.error) {
                 if (splitFound && (proceed || event.fullName == parentEle)) {
                   proceed = true
-                  event pop ()
+                  event pop()
                   if (writers.contains(event.name)) {
                     if (sourceAvro isDefined) {
                       config.inputAvroMappings.foreach {
                         case (source, target) =>
                           if ((source != config.inputAvroKey) && !config.inputAvroUniqueKey
-                                .contains(source)) {
+                            .contains(source)) {
                             splitRecord.put(target, sourceAvro.get.get(source))
                           }
                       }
@@ -212,7 +212,7 @@ class AvroBuilder(config: XMLConfig) {
                 }
               }
             case COMMENT => // Do nothing
-            case other   => unknown(other.toString, event)
+            case other => unknown(other.toString, event)
           }
         } catch {
           case e: Exception =>
@@ -229,7 +229,7 @@ class AvroBuilder(config: XMLConfig) {
         } finally {
           if (event.isEndElement && config.documentRootTag == event.name) {
             documentFound = false
-            currentDoc.get close ()
+            currentDoc.get close()
             currentDoc = None
           }
           prevEvent = event
@@ -262,9 +262,9 @@ class AvroBuilder(config: XMLConfig) {
           val name = attr.getName
           if (name.getLocalPart.toLowerCase() != "schemalocation")
             attrMap += XNode(name.getLocalPart,
-                             name.getNamespaceURI,
-                             name.getPrefix,
-                             attribute = true) -> attr.getValue
+              name.getNamespaceURI,
+              name.getPrefix,
+              attribute = true) -> attr.getValue
         }
       }
       attrMap
