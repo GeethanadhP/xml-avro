@@ -52,7 +52,7 @@ final class SchemaBuilder(config: XSDConfig) {
       loader load schemaInput
     }
     xsdIn.close()
-    errorHandler check ()
+    errorHandler check()
 
     // Generate schema for all the elements
     val schema = {
@@ -62,8 +62,8 @@ final class SchemaBuilder(config: XSDConfig) {
       for ((_, ele: XSElementDeclaration) <- elements.asScala) {
         debug(s"Processing root element ${XNode(ele) toString}")
         tempSchemas += ele -> processType(ele.getTypeDefinition,
-                                          optional = false,
-                                          array = false)
+          optional = false,
+          array = false)
       }
 
       if (tempSchemas isEmpty)
@@ -76,7 +76,7 @@ final class SchemaBuilder(config: XSDConfig) {
         val fields = mutable.ListBuffer[Field]()
         for ((ele, record) <- tempSchemas) {
           val optionalSchema = Schema createUnion List[Schema](nullSchema,
-                                                               record).asJava
+            record).asJava
           val field =
             new Field(validName(ele.getName).get, optionalSchema, null, null)
           field.addProp(XNode.SOURCE, XNode(ele).source)
@@ -92,7 +92,7 @@ final class SchemaBuilder(config: XSDConfig) {
     // Write the schema output
     val avscOut = avscFile.toFile.bufferedOutput()
     avscOut write schema.toString(true).getBytes()
-    avscOut close ()
+    avscOut close()
   }
 
   private def processType(eleType: XSTypeDefinition,
@@ -119,52 +119,52 @@ final class SchemaBuilder(config: XSDConfig) {
   }
 
   private def processGroup(
-      term: XSTerm,
-      innerOptional: Boolean = false,
-      array: Boolean = false): mutable.Map[String, Field] = {
+                            term: XSTerm,
+                            innerOptional: Boolean = false,
+                            array: Boolean = false): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     val group = term.asInstanceOf[XSModelGroup]
     group.getCompositor match {
       case XSModelGroup.COMPOSITOR_CHOICE =>
         if (rebuildChoice)
           fields ++= processGroupParticle(group,
-                                          innerOptional = true,
-                                          innerArray = array)
+            innerOptional = true,
+            innerArray = array)
         else if (!array)
           fields ++= processGroupParticle(group,
-                                          innerOptional = true,
-                                          innerArray = false)
+            innerOptional = true,
+            innerArray = false)
         else {
           val name = generateTypeName
           val groupRecord = createRecord(generateTypeName, group)
           fields += (name -> new Field(name,
-                                       Schema.createArray(groupRecord),
-                                       null,
-                                       null))
+            Schema.createArray(groupRecord),
+            null,
+            null))
         }
       case XSModelGroup.COMPOSITOR_SEQUENCE =>
         if (!array)
           fields ++= processGroupParticle(group,
-                                          innerOptional,
-                                          innerArray = false)
+            innerOptional,
+            innerArray = false)
         else {
           val name = generateTypeName
           val groupRecord = createRecord(generateTypeName, group)
           fields += (name -> new Field(name,
-                                       Schema.createArray(groupRecord),
-                                       null,
-                                       null))
+            Schema.createArray(groupRecord),
+            null,
+            null))
         }
     }
   }
 
   private def processGroupParticle(
-      group: XSModelGroup,
-      innerOptional: Boolean,
-      innerArray: Boolean): mutable.Map[String, Field] = {
+                                    group: XSModelGroup,
+                                    innerOptional: Boolean,
+                                    innerArray: Boolean): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     for (particle <- group.getParticles.asScala.map(
-           _.asInstanceOf[XSParticle])) {
+      _.asInstanceOf[XSParticle])) {
       val optional = innerOptional || particle.getMinOccurs == 0
       val array = innerArray || particle.getMaxOccurs > 1 || particle.getMaxOccursUnbounded
       val innerTerm = particle.getTerm
@@ -182,7 +182,7 @@ final class SchemaBuilder(config: XSDConfig) {
   }
 
   private def processAttributes(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                                 complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
 
     // Process normal attributes
@@ -203,10 +203,10 @@ final class SchemaBuilder(config: XSDConfig) {
   }
 
   private def processExtension(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                                complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
 
-    if (complexType derivedFromType (SchemaGrammar.fAnySimpleType, XSConstants.DERIVATION_EXTENSION)) {
+    if (complexType derivedFromType(SchemaGrammar.fAnySimpleType, XSConstants.DERIVATION_EXTENSION)) {
       var extnType = complexType
       while (extnType.getBaseType.getTypeCategory == XSTypeDefinition.COMPLEX_TYPE) extnType =
         extnType.getBaseType.asInstanceOf[XSComplexTypeDefinition]
@@ -220,7 +220,7 @@ final class SchemaBuilder(config: XSDConfig) {
   }
 
   private def processParticle(
-      complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
+                               complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     val particle = Option(complexType.getParticle)
     if (particle isDefined)
@@ -233,9 +233,9 @@ final class SchemaBuilder(config: XSDConfig) {
     val fields = mutable.LinkedHashMap[String, Field]()
     typeDef match {
       case complexType: XSComplexTypeDefinition =>
-        updateFields(fields, processAttributes(complexType))
         updateFields(fields, processExtension(complexType))
         updateFields(fields, processParticle(complexType))
+        updateFields(fields, processAttributes(complexType))
       case complexType: XSTerm =>
         updateFields(fields, processGroup(complexType))
     }
@@ -246,7 +246,18 @@ final class SchemaBuilder(config: XSDConfig) {
   private def updateFields(originalFields: mutable.Map[String, Field],
                            newField: mutable.Map[String, Field]) = {
     //TODO make it unique
-    originalFields ++= newField
+    for ((key, field) <- newField) {
+      if (originalFields contains key) {
+        val newKey = (field getProp "source").split(" ")(0) + "_" + key
+        val tempField: Field = new Field(validName(newKey).get, field.schema(), field.doc(), field.defaultValue())
+        for ((name, json) <- field.getJsonProps.asScala)
+          tempField.addProp(name, json)
+        //        field.addProp(XNode.SOURCE, XNode(ele, attribute).source)
+        originalFields += newKey -> tempField
+      } else {
+        originalFields += key -> field
+      }
+    }
   }
 
   // Create field for an element
@@ -355,7 +366,7 @@ final class SchemaBuilder(config: XSDConfig) {
 
   /** Read the referenced XSD as per name specified */
   private class SchemaResolver(private val baseDir: Path)
-      extends XMLEntityResolver {
+    extends XMLEntityResolver {
     System.setProperty("user.dir", baseDir.toAbsolute.path)
 
     @throws[XNIException]
