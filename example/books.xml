@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bks:books xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bks="urn:books"
+           xsi:schemaLocation="urn:books books.xsd" xmlns:ot="http://maven.apache.org/POM/4.0.0">
+    <book id="b001">
+        <author>Brandon Sanderson</author>
+        <title>Mistborn</title>
+        <genre>Fantasy</genre>
+        <price>50</price>
+        <pub_date>2006-12-17T09:30:47.0Z</pub_date>
+        <review>
+            <title>Wonderful</title>
+            <content>I love the plot twitst and the new magic</content>
+        </review>
+        <review>
+            <title>Unbeliveable twitst</title>
+            <content>The best book i ever read</content>
+        </review>
+        <sold>10</sold>
+    </book>
+
+</bks:books>

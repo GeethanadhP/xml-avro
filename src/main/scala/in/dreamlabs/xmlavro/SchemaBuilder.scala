@@ -104,7 +104,9 @@ final class SchemaBuilder(config: XSDConfig) {
       case COMPLEX_TYPE =>
         val name = complexTypeName(eleType)
         debug(s"Creating schema for type $name")
-        schemas.getOrElse(name, createRecord(name, eleType))
+        val tempSchema = schemas.getOrElse(name, createRecord(name, eleType))
+        debug(s"Created schema for type $name")
+        tempSchema
       case others =>
         throw ConversionException(s"Unknown Element type: $others")
     }
@@ -247,7 +249,7 @@ final class SchemaBuilder(config: XSDConfig) {
                            newField: mutable.Map[String, Field]) = {
     //TODO make it unique
     for ((key, field) <- newField) {
-      if (originalFields contains key) {
+      if (key != "others" && (originalFields contains key)) {
         val newKey = (field getProp "source").split(" ")(0) + "_" + key
         val tempField: Field = new Field(validName(newKey).get, field.schema(), field.doc(), field.defaultValue())
         for ((name, json) <- field.getJsonProps.asScala)

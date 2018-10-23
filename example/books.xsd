@@ -1,0 +1,53 @@
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:bks="urn:books" xmlns:books="http://www.books.com/XML"
+			targetNamespace="urn:books">
+	<xsd:element name="books" type="bks:BooksForm"/>
+	<xsd:complexType name="BooksForm">
+		<xsd:sequence>
+			<xsd:element name="book" type="bks:BookForm" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="BookForm">
+		<xsd:sequence>
+			<xsd:element name="author" type="xsd:string"/>
+			<xsd:element name="title" type="xsd:string"/>
+			<xsd:element name="genre" type="xsd:string"/>
+			<xsd:element name="price" type="bks:PriceType" minOccurs="0" maxOccurs="3"/>
+			<xsd:element name="pub_date" type="xsd:dateTime" minOccurs="0"/>
+			<xsd:choice maxOccurs="unbounded">
+				<xsd:element name="review" type="bks:ReviewType"/>
+				<xsd:sequence>
+					<xsd:element name="alias" type="bks:AliasType"/>
+					<xsd:element name="website" type="bks:WebsiteType"/>
+				</xsd:sequence>
+				<xsd:element name="sold" type="xsd:integer"/>
+			</xsd:choice>
+			<xsd:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="id" type="xsd:string"/>
+		<xsd:anyAttribute namespace="##other" processContents="lax"/>
+	</xsd:complexType>
+	<xsd:complexType name="AliasType">
+		<xsd:sequence>
+			<xsd:element name="title" type="xsd:string"/>
+			<xsd:element name="language" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ReviewType">
+		<xsd:sequence>
+			<xsd:element name="title" type="xsd:string"/>
+			<xsd:element name="content" type="xsd:string" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="WebsiteType">
+		<xsd:sequence>
+			<xsd:element name="url" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="PriceType">
+		<xsd:simpleContent>
+			<xsd:extension base="xsd:decimal">
+				<xsd:attribute name="currency" type="xsd:string" use="optional"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+</xsd:schema>

@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'scala'
 
 group = 'in.dreamlabs'
-version = '1.7.11'
+version = '1.7.12'
 
 description = "A simple tool to convert xml to avro and their respective schemas"
 

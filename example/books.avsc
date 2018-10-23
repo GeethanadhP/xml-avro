@@ -1,0 +1,140 @@
+{
+  "type" : "record",
+  "name" : "BooksForm",
+  "fields" : [ {
+    "name" : "book",
+    "type" : {
+      "type" : "array",
+      "items" : {
+        "type" : "record",
+        "name" : "BookForm",
+        "fields" : [ {
+          "name" : "author",
+          "type" : "string",
+          "source" : "element author"
+        }, {
+          "name" : "title",
+          "type" : "string",
+          "source" : "element title"
+        }, {
+          "name" : "genre",
+          "type" : "string",
+          "source" : "element genre"
+        }, {
+          "name" : "price",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : {
+              "type" : "record",
+              "name" : "PriceType",
+              "fields" : [ {
+                "name" : "text_value",
+                "type" : [ "null", "double" ],
+                "source" : "element text_value"
+              }, {
+                "name" : "currency",
+                "type" : [ "null", "string" ],
+                "default" : null,
+                "source" : "attribute currency"
+              } ]
+            }
+          } ],
+          "default" : null,
+          "source" : "element price"
+        }, {
+          "name" : "pub_date",
+          "type" : [ "null", "string" ],
+          "default" : null,
+          "source" : "element pub_date"
+        }, {
+          "name" : "review",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : {
+              "type" : "record",
+              "name" : "ReviewType",
+              "fields" : [ {
+                "name" : "title",
+                "type" : "string",
+                "source" : "element title"
+              }, {
+                "name" : "content",
+                "type" : [ "null", "string" ],
+                "default" : null,
+                "source" : "element content"
+              } ]
+            }
+          } ],
+          "default" : null,
+          "source" : "element review"
+        }, {
+          "name" : "type0",
+          "type" : {
+            "type" : "array",
+            "items" : {
+              "type" : "record",
+              "name" : "type1",
+              "fields" : [ {
+                "name" : "alias",
+                "type" : {
+                  "type" : "record",
+                  "name" : "AliasType",
+                  "fields" : [ {
+                    "name" : "title",
+                    "type" : "string",
+                    "source" : "element title"
+                  }, {
+                    "name" : "language",
+                    "type" : [ "null", {
+                      "type" : "array",
+                      "items" : "string"
+                    } ],
+                    "default" : null,
+                    "source" : "element language"
+                  } ]
+                },
+                "source" : "element alias"
+              }, {
+                "name" : "website",
+                "type" : {
+                  "type" : "record",
+                  "name" : "WebsiteType",
+                  "fields" : [ {
+                    "name" : "url",
+                    "type" : [ "null", {
+                      "type" : "array",
+                      "items" : "string"
+                    } ],
+                    "default" : null,
+                    "source" : "element url"
+                  } ]
+                },
+                "source" : "element website"
+              } ]
+            }
+          }
+        }, {
+          "name" : "sold",
+          "type" : [ "null", {
+            "type" : "array",
+            "items" : "string"
+          } ],
+          "default" : null,
+          "source" : "element sold"
+        }, {
+          "name" : "others",
+          "type" : {
+            "type" : "map",
+            "values" : "string"
+          }
+        }, {
+          "name" : "id",
+          "type" : [ "null", "string" ],
+          "default" : null,
+          "source" : "attribute id"
+        } ]
+      }
+    },
+    "source" : "element book"
+  } ]
+}

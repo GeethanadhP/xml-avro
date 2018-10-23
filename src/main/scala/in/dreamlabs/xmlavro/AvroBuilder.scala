@@ -222,7 +222,7 @@ class AvroBuilder(config: XMLConfig) {
                 var innerMessage =
                   s"'${event.toString}' after ${prevEvent.toString} at Line: ${event.getLocation.getLineNumber}, Column: ${event.getLocation.getColumnNumber}"
                 val message =
-                  s"${e.toString} occurred while processing $innerMessage"
+                  s"${e.toString}${if (config.debug) "\n" + e.getStackTrace.mkString("\n")} occurred while processing $innerMessage"
                 doc.fail(ConversionException(message), wait = true)
             }
             proceed = false

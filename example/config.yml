@@ -1,0 +1,15 @@
+baseDir: "example"
+debug: false
+XSD:
+  xsdFile: "books.xsd"
+  avscFile: "books.avsc"
+  stringTimestamp: true
+
+XML:
+  xmlInput: "books.xml"
+  avroOutput: "books.avro"
+  documentRootTag: "books"
+  avscFile: "books.avsc"
+  validationXSD: "books.xsd"
+  ignoreMissing: false
+  caseSensitive: true
