@@ -144,7 +144,7 @@ final class SchemaBuilder(config: XSDConfig) {
             null,
             null))
         }
-      case XSModelGroup.COMPOSITOR_SEQUENCE =>
+      case XSModelGroup.COMPOSITOR_SEQUENCE | XSModelGroup.COMPOSITOR_ALL =>
         if (!array)
           fields ++= processGroupParticle(group,
             innerOptional,
@@ -157,6 +157,7 @@ final class SchemaBuilder(config: XSDConfig) {
             null,
             null))
         }
+
     }
   }
 
@@ -246,7 +247,7 @@ final class SchemaBuilder(config: XSDConfig) {
 
   // Checks if the new set of fields are already existing and generates a new name for duplicate fields
   private def updateFields(originalFields: mutable.Map[String, Field],
-                           newField: mutable.Map[String, Field]) = {
+                           newField: mutable.Map[String, Field]): Unit = {
     //TODO make it unique
     for ((key, field) <- newField) {
       if (key != "others" && (originalFields contains key)) {

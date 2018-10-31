@@ -17,7 +17,7 @@ dependencies {
     compile 'org.scala-lang:scala-library:2.12.1'
     compile 'org.scala-lang:scala-reflect:2.12.1'
     compile 'org.yaml:snakeyaml:1.17'
-    compile 'org.apache.avro:avro:1.7.5'
+    compile 'org.apache.avro:avro:1.7.7'
     compile 'xerces:xercesImpl:2.11.0'
     testCompile 'org.skyscreamer:jsonassert:1.2.3'
     testCompile 'junit:junit:4.8.1'
