@@ -36,7 +36,7 @@ class AvroSchema:
                 split_by = None
 
         if not self._fields:
-            print 'Split element {} not found'.format(split_by)
+            print('Split element {} not found'.format(split_by))
             exit(1)
         schema = self._generate_schema(self._fields)
 
@@ -256,8 +256,8 @@ class Node:
                     if value_type in Node.type_dict.keys():
                         value_type = self.type_dict[node_type]
                     else:
-                        print '1 - {} type not found in the schema'.format(
-                            node_type)
+                        print('1 - {} type not found in the schema'.format(
+                            node_type))
                         exit(1)
                     return 'MAP', '{}, {}'.format('STRING', value_type)
 
@@ -268,7 +268,7 @@ class Node:
         elif node_type in Node.type_dict.keys():
             return 'STRUCT', self.type_dict[node_type]
         else:
-            print '2 - {} type not found in the schema'.format(node_type)
+            print('2 - {} type not found in the schema'.format(node_type))
             exit(1)
 
     def __repr__(self):

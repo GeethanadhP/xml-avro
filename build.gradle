@@ -14,8 +14,8 @@ repositories {
     maven { url "http://repo.maven.apache.org/maven2" } }
 
 dependencies {
-    compile 'org.scala-lang:scala-library:2.12.1'
-    compile 'org.scala-lang:scala-reflect:2.12.1'
+    compile 'org.scala-lang:scala-library:2.12.6'
+    compile 'org.scala-lang:scala-reflect:2.12.6'
     compile 'org.yaml:snakeyaml:1.17'
     compile 'org.apache.avro:avro:1.7.7'
     compile 'xerces:xercesImpl:2.11.0'
