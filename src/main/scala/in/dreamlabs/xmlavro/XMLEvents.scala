@@ -35,7 +35,7 @@ object XMLEvents {
     eleStack.insert(0, node)
 
     var found = false
-    if (eleStack.lengthCompare(1) != 0) {
+    if (eleStack.length != 1) {
       val (field, path, _) = searchField(lastSchema, node)
       if (field isDefined) {
         schemaPath ++= path.reverse
@@ -90,8 +90,10 @@ object XMLEvents {
                    schema: Schema,
                    node: XNode): (Option[Field], ListBuffer[AvroPath], Schema) = {
     var fieldSchema = schema.simplify
-    var field = schema.field(node)
+    var field = schema.deepSchema.field(node)
     val path = ListBuffer[AvroPath]()
+
+    // If field is not a direct child in schema, search through all custom fields
     if (field isEmpty)
       breakable {
         for (typeField <- fieldSchema.customTypeFields()) {

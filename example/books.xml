@@ -9,13 +9,26 @@
         <pub_date>2006-12-17T09:30:47.0Z</pub_date>
         <review>
             <title>Wonderful</title>
-            <content>I love the plot twitst and the new magic</content>
+            <content>I love the plot twist and the new magic</content>
         </review>
         <review>
-            <title>Unbeliveable twitst</title>
+            <title>Unbelievable twist</title>
             <content>The best book i ever read</content>
         </review>
         <sold>10</sold>
     </book>
-
+    <book id="b002">
+        <author>Brandon Sanderson</author>
+        <title>Way of Kings</title>
+        <genre>Fantasy</genre>
+        <price>50</price>
+        <pub_date>2006-12-17T09:30:47.0Z</pub_date>
+        <!--<alias>-->
+            <!--<title>Way of the kings</title>-->
+        <!--</alias>-->
+        <!--<website>-->
+            <!--<url></url>-->
+        <!--</website>-->
+        <sold>10</sold>
+    </book>
 </bks:books>

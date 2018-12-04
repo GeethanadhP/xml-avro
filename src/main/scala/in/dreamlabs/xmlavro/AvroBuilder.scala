@@ -183,10 +183,12 @@ class AvroBuilder(config: XMLConfig) {
               }
             case END_ELEMENT =>
               if (splitFound && proceed && currentDoc.isDefined && !currentDoc.get.error && prevEvent.isStartElement) {
-                val path = event.path.last.name
-                if (path != event.name) {
-                  val record = splitRecord.at(event path)
-                  record.add(event element, "")
+                if (event.path.nonEmpty) {
+                  val path = event.path.last.name
+                  if (path != event.name) {
+                    val record = splitRecord.at(event path)
+                    record.add(event element, "")
+                  }
                 }
               }
               if (currentDoc.isDefined && !currentDoc.get.error) {
