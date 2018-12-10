@@ -13,3 +13,5 @@ tmp
 /.gradle/
 /build/
 /out/
+
+example/books\.avro
