@@ -49,33 +49,35 @@ object XMLEvents {
 
   def removeElement(node: XNode): Unit = {
     if (node.name != eleStack.head.name)
-      throw ConversionException("No. of closing tags is not matching opening tags, contact the developer")
+      throw ConversionException(s"No. of closing tags is not matching opening tags when closing ${node.name}, contact the developer")
 
     eleStack.remove(0)
     var count = schemaPath.size
     if (count != 0) {
-      if (SchemaBuilder.HIVE_KEYWORDS.contains(node.name.toUpperCase)) {
+      val schemaNodeName = if (SchemaBuilder.HIVE_KEYWORDS.contains(node.name.toUpperCase))
         if (schemaPath.last.name != s"${node.name}_value" && Option(lastSchema.getField(s"${node.name}_value")).isEmpty) {
           AvroPath.warning(eleStack, s"${node.name} found in the XML is a Hive keyword, " +
             s"but the avsc schema is not modified to fix any possible issues, " +
             s"please consider updating it to ${node.name}_value or re-create the avsc with latest jar. " +
             s"If you updated the avsc make sure you update your table schema as well")
-        }
+          node.name
+        } else
+          s"${node.name}_value"
+      else
+        node.name
+
+
+      if (schemaPath.last.name == schemaNodeName && node.name != eleStack.head.name) { //Complex tag closing
         count = destroyLastPath()
         while (count != 0 && schemaPath.last.virtual) {
           count = destroyLastPath()
         }
-      } else {
-        if (schemaPath.last.name == node.name && node.name != eleStack.head.name) { //Complex tag closing
+      } else if (schemaPath.last.name.startsWith("type")) {
+        while (count != 0 && schemaPath.last.virtual) {
           count = destroyLastPath()
-          while (count != 0 && schemaPath.last.virtual) {
-            count = destroyLastPath()
-          }
-        } else if (schemaPath.last.name.startsWith("type"))
-          while (count != 0 && schemaPath.last.virtual) {
-            count = destroyLastPath()
-          }
+        }
       }
+
       lastSchema = rootRecord.at(schemaPath.toList).getSchema
     }
   }

@@ -164,9 +164,11 @@ class AvroBuilder(config: XMLConfig) {
                   AvroPath.reset()
                   proceed = true
                 }
+
                 if (splitFound && proceed) {
                   proceed = event push()
                   parentEle = event.fullName
+
                   if (event.hasAttributes && proceed) {
                     val record = splitRecord.at(event path)
                     event.attributes foreach {
