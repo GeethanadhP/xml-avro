@@ -17,6 +17,7 @@ import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.node.NullNode
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.HashMap
 import scala.collection.mutable
 import scala.reflect.io.Path
 
@@ -29,6 +30,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private val baseDir = config.baseDir
   private val stringTimestamp = config.stringTimestamp
   private val rebuildChoice = config.rebuildChoice
+  private val onlyFirstRootElement = config.onlyFirstRootElement
   private val xsdFile = config.xsdFile
   private val avscFile = config.avscFile
   private val schemas = mutable.Map[String, Schema]()
@@ -59,7 +61,10 @@ final class SchemaBuilder(config: XSDConfig) {
       val tempSchemas = mutable.LinkedHashMap[XSObject, Schema]()
       val elements: XSNamedMap =
         model.getComponents(XSConstants ELEMENT_DECLARATION)
-      for ((_, ele: XSElementDeclaration) <- elements.asScala) {
+      val rootElements =
+        if (onlyFirstRootElement) HashMap("0" -> elements.item(0))
+        else elements.asScala
+      for ((_, ele: XSElementDeclaration) <- rootElements) {
         debug(s"Processing root element ${XNode(ele) toString}")
         tempSchemas += ele -> processType(ele.getTypeDefinition,
           optional = false,
