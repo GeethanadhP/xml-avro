@@ -67,4 +67,5 @@ XSD:
   xsdFile: "somefile.xsd"       # Source of XSD
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
   stringTimestamp: true         # Represent timestamp as string instead of long
+  onlyFirstRootElement: true    # Only process the first root element (useful with nested xsds). Default value is false.
 ```
