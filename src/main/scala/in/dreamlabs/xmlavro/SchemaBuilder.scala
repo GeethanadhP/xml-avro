@@ -29,6 +29,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private val baseDir = config.baseDir
   private val stringTimestamp = config.stringTimestamp
   private val rebuildChoice = config.rebuildChoice
+  private val ignoreHiveKeyword = config.ignoreHiveKeyword
   private val xsdFile = config.xsdFile
   private val avscFile = config.avscFile
   private val schemas = mutable.Map[String, Schema]()
@@ -349,7 +350,7 @@ final class SchemaBuilder(config: XSDConfig) {
           case _: IllegalArgumentException =>
         }
         // Handle hive keywords
-        if (SchemaBuilder.HIVE_KEYWORDS.contains(finalName.toUpperCase))
+        if (!ignoreHiveKeyword && SchemaBuilder.HIVE_KEYWORDS.contains(finalName.toUpperCase))
           finalName = finalName + "_value"
         Option(finalName)
       }
