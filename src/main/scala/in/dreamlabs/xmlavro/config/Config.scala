@@ -60,6 +60,7 @@ class XSDConfig {
   @BeanProperty var stringTimestamp: Boolean = false
   @BeanProperty var ignoreHiveKeyword: Boolean = false
   @BeanProperty var onlyFirstRootElement: Boolean = false
+  @BeanProperty var rootElementQName: String = null
 
   def getXsdFile: String = xsdFile.path
 

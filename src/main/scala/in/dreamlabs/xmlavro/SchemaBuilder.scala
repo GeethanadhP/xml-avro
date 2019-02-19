@@ -3,6 +3,7 @@ package in.dreamlabs.xmlavro
 import java.io.IOException
 
 import in.dreamlabs.xmlavro.config.XSDConfig
+import javax.xml.namespace.QName
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
 import org.apache.xerces.dom.DOMInputImpl
@@ -32,6 +33,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private val rebuildChoice = config.rebuildChoice
   private val ignoreHiveKeyword = config.ignoreHiveKeyword
   private val onlyFirstRootElement = config.onlyFirstRootElement
+  private val rootElementQName = config.rootElementQName
   private val xsdFile = config.xsdFile
   private val avscFile = config.avscFile
   private val schemas = mutable.Map[String, Schema]()
@@ -64,7 +66,15 @@ final class SchemaBuilder(config: XSDConfig) {
         model.getComponents(XSConstants ELEMENT_DECLARATION)
       val rootElements =
         if (onlyFirstRootElement) HashMap("0" -> elements.item(0))
+        else if (!rootElementQName.isEmpty) {
+          val idx = (0 to elements.getLength - 1)
+            .iterator
+            .find(i => rootElementQName.equalsIgnoreCase(new QName(elements.item(i).getNamespace(), elements.item(i).getName()).toString))
+            .head
+          HashMap("1" -> elements.item(idx))
+        }
         else elements.asScala
+
       for ((_, ele: XSElementDeclaration) <- rootElements) {
         debug(s"Processing root element ${XNode(ele) toString}")
         tempSchemas += ele -> processType(ele.getTypeDefinition,
