@@ -1,5 +1,7 @@
 package in.dreamlabs.xmlavro.config
 
+import javax.xml.namespace.QName
+
 import scala.collection.immutable.List
 import scala.collection.mutable
 import scala.reflect.io.Path
@@ -54,10 +56,10 @@ class ArgParse(args: Seq[String]) {
       case t if t =:= typeOf[List[Double]] => original.validate().map(value => value.toDouble).asInstanceOf[T]
       case t if t =:= typeOf[List[Boolean]] => original.validate().map(value => value.toBoolean).asInstanceOf[T]
       case t if t =:= typeOf[List[Path]] => original.validate().map(value => Path(value)).asInstanceOf[T]
+      case t if t =:= typeOf[QName] => QName.valueOf(original.fetch()).asInstanceOf[T]
       case other => throw new IllegalArgumentException(s"Type $other is not yet supported")
     }
   }
-
   def toggle(name: String, short: Char): Option[Boolean] = {
     if (argsMap.contains(name) || argsMap.contains(short + "")) {
       val key = if (argsMap contains name) name else short + ""
