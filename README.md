@@ -16,18 +16,12 @@ Later evolved to separate project with lotsss of bug fixes, memory & performance
 ### Running Project
 1. `git clone` to clone the repository to local
 2. `gradle build` to generate the jar file
-3. `java -jar xml-avro.jar <options>` to run the code (options as below) 
+3. `java -jar ./build/libs/xml-avro-all-<VERSION>.jar -c <CONFIG_FILE>` to run the code (options as below)
 
-### Basic Command line Options
-```
-XSD to AVSC Usage : {-d|--debug} {-b|--baseDir <baseDir>} -xsd|--toAvsc <xsdFile> {<avscFile>}
-XML to AVRO Usage : {-b|--baseDir <baseDir>} {-s|--stream|--stdout} -xml|--toAvro <avscFile> {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>} {-i|--ignoreMissing} {-v|--validateSchema <xsdFile>}
-Mixed Usage : {-d|--debug} {-b|--baseDir <baseDir>} -xsd|--toAvsc <xsdFile> {<avscFile>} {-s|--stream|--stdout} -xml|--toAvro {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>} {-i|--ignoreMissing} {-v|--validateSchema <xsdFile>}
-Use Config File: -c <configFile>
-```
+Check `./example/config.yml` for sample configuration file
 
-### Advanced Configuration
-For advanced configuration create yml config file. As per the below format
+### Config File
+Create yml config file as per the below format
 ```
 debug: false                    # Enable printing of debug messages
 baseDir: "files"                # Base directory where most files are relative to
@@ -67,6 +61,6 @@ XSD:
   xsdFile: "somefile.xsd"       # Source of XSD
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
   stringTimestamp: true         # Represent timestamp as string instead of long
-  onlyFirstRootElement: true    # Only process the first root element (useful with nested xsds). Default value is false.
+  ignoreHiveKeywords: true      # Do not suffix field name with `_value` when matching Hive keywords. Default value is false.
   rootElementQName: "{ns}name"  # Only generate schema for root element matching this QName
 ```

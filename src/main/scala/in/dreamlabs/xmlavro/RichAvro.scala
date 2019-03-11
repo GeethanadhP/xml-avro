@@ -59,7 +59,7 @@ trait RichAvro {
       if (fieldOp isEmpty) {
         fieldOp = schema wildcard (node attribute)
         if (fieldOp isDefined) wildcard = true
-        else if (value.trim() != "")
+        else if (value.trim() != "" && node.name!="nil")
           AvroPath.missing(XMLEvents.eleStack, node)
       }
       if (fieldOp isDefined) {

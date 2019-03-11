@@ -31,8 +31,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private val baseDir = config.baseDir
   private val stringTimestamp = config.stringTimestamp
   private val rebuildChoice = config.rebuildChoice
-  private val ignoreHiveKeyword = config.ignoreHiveKeyword
-  private val onlyFirstRootElement = config.onlyFirstRootElement
+  private val ignoreHiveKeywords = config.ignoreHiveKeywords
   private val rootElementQName = config.rootElementQName
   private val xsdFile = config.xsdFile
   private val avscFile = config.avscFile
@@ -65,8 +64,7 @@ final class SchemaBuilder(config: XSDConfig) {
       val elements: XSNamedMap =
         model.getComponents(XSConstants ELEMENT_DECLARATION)
       val rootElements =
-        if (onlyFirstRootElement) HashMap("0" -> elements.item(0))
-        else if (!rootElementQName.isEmpty) {
+        if (!rootElementQName.isEmpty) {
           val idx = (0 to elements.getLength - 1)
             .iterator
             .find(i => rootElementQName.equalsIgnoreCase(new QName(elements.item(i).getNamespace(), elements.item(i).getName()).toString))
@@ -365,7 +363,7 @@ final class SchemaBuilder(config: XSDConfig) {
           case _: IllegalArgumentException =>
         }
         // Handle hive keywords
-        if (!ignoreHiveKeyword && SchemaBuilder.HIVE_KEYWORDS.contains(finalName.toUpperCase))
+        if (!ignoreHiveKeywords && SchemaBuilder.HIVE_KEYWORDS.contains(finalName.toUpperCase))
           finalName = finalName + "_value"
         Option(finalName)
       }
