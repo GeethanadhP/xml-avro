@@ -58,7 +58,7 @@ class XSDConfig {
   var avscFile: Path = _
   @BeanProperty var rebuildChoice: Boolean = true
   @BeanProperty var stringTimestamp: Boolean = false
-  @BeanProperty var ignoreHiveKeyword: Boolean = false
+  @BeanProperty var ignoreHiveKeywords: Boolean = false
 
   def getXsdFile: String = xsdFile.path
 
