@@ -34,7 +34,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
     val splitBy = opt[String]("splitBy", 'y')
     val ignoreMissing = toggle("ignoreMissing", 'i')
     val validateSchema = opt[Path]("validateSchema", 'v')
-    val ignoreHiveKeyword = toggle("ignoreHiveKeyword", 'h')
+    val ignoreHiveKeywords = toggle("ignoreHiveKeywords", 'h')
     val rootElementQName = opt[QName]("rootElementQName", 'r')
 
     if (debug isDefined) config.debug = debug.get
@@ -47,7 +47,7 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
           config.XSD = Option(temp)
           temp
         }
-      if (ignoreHiveKeyword isDefined) tempConfig.ignoreHiveKeyword = ignoreHiveKeyword.get
+      if (ignoreHiveKeywords isDefined) tempConfig.ignoreHiveKeywords = ignoreHiveKeywords.get
       tempConfig.rootElementQName = rootElementQName
       val temp = xsd.get
       tempConfig.xsdFile = temp.head
@@ -108,11 +108,11 @@ class ConfigParser(args: Seq[String]) extends ArgParse(args) {
 
 object ConfigParser {
   val USAGE1 =
-    "{-d|--debug} {-b|--baseDir <baseDir>} -xsd|--toAvsc <xsdFile> {<avscFile>} {-h|--ignoreHiveKeyword} {-r|rootElementQName <QName>}"
+    "{-d|--debug} {-b|--baseDir <baseDir>} -xsd|--toAvsc <xsdFile> {<avscFile>} {-h|--ignoreHiveKeywords} {-r|rootElementQName <QName>}"
   val USAGE2 =
     "{-b|--baseDir <baseDir>} {-s|--stream|--stdout} -xml|--toAvro <avscFile> {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>} {-i|--ignoreMissing} {-v|--validateSchema <xsdFile>}"
   val USAGE3 =
-    "{-d|--debug} {-b|--baseDir <baseDir>} {-xsd|--toAvsc <xsdFile> {<avscFile>} {-h|--ignoreHiveKeyword} {-r|rootElementQName <QName>}} {-s|--stream|--stdout} {-xml|--toAvro {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>}} {-i|--ignoreMissing}"
+    "{-d|--debug} {-b|--baseDir <baseDir>} {-xsd|--toAvsc <xsdFile> {<avscFile>} {-h|--ignoreHiveKeywords} {-r|rootElementQName <QName>}} {-s|--stream|--stdout} {-xml|--toAvro {<xmlFile>} {<avroFile>} {-sb|--splitby <splitBy>}} {-i|--ignoreMissing}"
   val USAGE: String = "XSD to AVSC Usage : " + USAGE1 + "\nXML to AVRO Usage : " + USAGE2 + "\nMixed Usage : " + USAGE3
 
   def apply(args: Array[String]): ConfigParser = new ConfigParser(args)
