@@ -4,6 +4,7 @@ import java.util
 
 import in.dreamlabs.xmlavro.ConversionException
 import in.dreamlabs.xmlavro.Utils.option
+import javax.xml.namespace.QName
 
 import scala.beans.BeanProperty
 import scala.collection.JavaConverters._
@@ -59,7 +60,7 @@ class XSDConfig {
   @BeanProperty var rebuildChoice: Boolean = true
   @BeanProperty var stringTimestamp: Boolean = false
   @BeanProperty var ignoreHiveKeywords: Boolean = false
-  @BeanProperty var rootElementQName: String = null
+  @BeanProperty var rootElementQName: Option[QName] = None
 
   def getXsdFile: String = xsdFile.path
 

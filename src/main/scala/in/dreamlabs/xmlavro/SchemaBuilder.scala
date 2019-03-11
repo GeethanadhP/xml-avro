@@ -3,7 +3,7 @@ package in.dreamlabs.xmlavro
 import java.io.IOException
 
 import in.dreamlabs.xmlavro.config.XSDConfig
-import javax.xml.namespace.QName
+import javax.xml.XMLConstants
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
 import org.apache.xerces.dom.DOMInputImpl
@@ -64,12 +64,14 @@ final class SchemaBuilder(config: XSDConfig) {
       val elements: XSNamedMap =
         model.getComponents(XSConstants ELEMENT_DECLARATION)
       val rootElements =
-        if (!rootElementQName.isEmpty) {
-          val idx = (0 to elements.getLength - 1)
-            .iterator
-            .find(i => rootElementQName.equalsIgnoreCase(new QName(elements.item(i).getNamespace(), elements.item(i).getName()).toString))
-            .head
-          HashMap("1" -> elements.item(idx))
+        if (rootElementQName isDefined) {
+          val rootElement = Option(elements.itemByName(rootElementQName.get.getNamespaceURI match {
+            case XMLConstants.NULL_NS_URI => null;
+            case ns: String => ns
+          }, rootElementQName.get.getLocalPart))
+          if (rootElement isEmpty)
+            throw new NoSuchElementException(s"The schema contains no root level element definition for QName '${rootElementQName.get}'")
+          HashMap("1" -> rootElement.get)
         }
         else elements.asScala
 
