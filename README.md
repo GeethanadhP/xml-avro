@@ -62,4 +62,5 @@ XSD:
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
   stringTimestamp: true         # Represent timestamp as string instead of long
   ignoreHiveKeywords: true      # Do not suffix field name with `_value` when matching Hive keywords. Default value is false.
+  rootElementQName: "{ns}name"  # Only generate schema for root element matching this QName
 ```
