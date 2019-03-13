@@ -75,6 +75,6 @@ XSD:
                                 #   "date" maps xs:date types to Avro "date" logical type annotating an "int".  
     xsTime: "string"            # Configures the Avro mapping of xs:time XML types. [ string | time-micros | time-millis ]
                                 #   "string" (the default) maps xs:time types to Avro "string".
-                                #   "time-micros" maps xs:time types to Avro "times-micros" logical type annotating a "long". 
-                                #   "time-millis" maps xs:time types to Avro "times-millis" logical type annotating a "long".
+                                #   "time-micros" maps xs:time types to Avro "time-micros" logical type annotating a "long". 
+                                #   "time-millis" maps xs:time types to Avro "time-millis" logical type annotating a "long".
 ```
