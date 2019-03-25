@@ -57,6 +57,7 @@ class XSDConfig {
   var baseDir: Option[Path] = _
   var xsdFile: Path = _
   var avscFile: Path = _
+  @BeanProperty var logicalTypes: LogicalTypesConfig = _
   @BeanProperty var rebuildChoice: Boolean = true
   @BeanProperty var stringTimestamp: Boolean = false
   @BeanProperty var ignoreHiveKeywords: Boolean = false
@@ -70,12 +71,93 @@ class XSDConfig {
 
   def setAvscFile(value: String): Unit = avscFile = Path(value)
 
-  def validate(): Unit = if (baseDir.isDefined) {
-    xsdFile = xsdFile toAbsoluteWithRoot baseDir.get
-    if (Option(avscFile) isDefined)
-      avscFile = avscFile toAbsoluteWithRoot baseDir.get
-    else
-      avscFile = xsdFile changeExtension "avsc"
+  def validate(): Unit = {
+    if (baseDir.isDefined) {
+      xsdFile = xsdFile toAbsoluteWithRoot baseDir.get
+      if (Option(avscFile) isDefined)
+        avscFile = avscFile toAbsoluteWithRoot baseDir.get
+      else
+        avscFile = xsdFile changeExtension "avsc"
+    }
+    logicalTypes = Option(logicalTypes) getOrElse new LogicalTypesConfig
+    logicalTypes.validate()
+    if (stringTimestamp) {
+      logicalTypes.xsDateTime = LogicalType.STRING
+    }
+  }
+}
+
+object LogicalType {
+  /**
+    * Logical type "timestamp-millis" annotating a long type.
+    */
+  val TIMESTAMP_MILLIS = "timestamp-millis"
+  /**
+    * Logical type "timestamp-micros" annotating a long type.
+    */
+  val TIMESTAMP_MICROS = "timestamp-micros"
+
+  /**
+    * Logical type "times-millis" annotating a long type.
+    */
+  val TIME_MILLIS = "time-millis"
+
+  /**
+    * Logical type "times-micros" annotating a long type.
+    */
+  val TIME_MICROS = "time-micros"
+
+  /**
+    * Logical type "date" annotating an int type.
+    */
+  val DATE = "date"
+
+  /**
+    * Dummy logical type for handling values as string without indicating a logicalType.
+    */
+  val STRING = "string"
+
+  /**
+    * Dummy logical type for handling values as long without indicating a logicalType.
+    */
+  val LONG = "long"
+}
+
+class LogicalTypesConfig {
+
+  @BeanProperty
+  var xsDateTime: String = LogicalType.LONG
+  @BeanProperty
+  var xsTime: String = LogicalType.STRING
+  @BeanProperty
+  var xsDate: String = LogicalType.STRING
+
+  def validate(): Unit = {
+    xsDateTime = Option(xsDateTime) getOrElse ""
+    xsDateTime match {
+      case LogicalType.LONG
+           | LogicalType.STRING
+           | LogicalType.TIMESTAMP_MILLIS
+           | LogicalType.TIMESTAMP_MICROS => /* accept */
+      case _ =>
+        throw new IllegalArgumentException("Invalid configuration for xs:dateTime logical type.")
+    }
+
+    xsTime = Option(xsTime) getOrElse ""
+    xsTime match {
+      case LogicalType.STRING
+           | LogicalType.TIME_MILLIS
+           | LogicalType.TIME_MICROS => /* accept */
+      case _ =>
+        throw new IllegalArgumentException("Invalid configuration for xs:time logical type.")
+    }
+
+    xsDate = Option(xsDate) getOrElse ""
+    xsDate match {
+      case LogicalType.STRING | LogicalType.DATE => /* accept */
+      case _ =>
+        throw new IllegalArgumentException("Invalid configuration for xs:date logical type.")
+    }
   }
 }
 

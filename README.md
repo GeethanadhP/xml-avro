@@ -60,7 +60,21 @@ XML:                            # Convert XML
 XSD:
   xsdFile: "somefile.xsd"       # Source of XSD
   avscFile: "books.avsc"        # Avsc file to save as - Optional (Uses the xsdFile to assume the output)
-  stringTimestamp: true         # Represent timestamp as string instead of long
+  stringTimestamp: true         # Represent timestamp as string instead of long. Defaults to false. Setting this value to "true" overrides XSD.logicalTypes.xsDateTime to "string".
   ignoreHiveKeywords: true      # Do not suffix field name with `_value` when matching Hive keywords. Default value is false.
   rootElementQName: "{ns}name"  # Only generate schema for root element matching this QName
+  logicalTypes:
+    xsDateTime: "long"          # Configures the Avro mapping of xs:dateTime XML types. [ long | string | timestamp-micros | timestamp-millis ]
+                                #   "long" (the default) maps xs:dateTime types to regular Avro "long". Same as the default mapping for xs:dateTime in older xml-avro versions. 
+                                #   "string" maps xs:dateTime types to Avro "string"
+                                #   "timestamp-micros" maps xs:dateTime types to Avro "timestamp-micros" logical type annotating a "long". 
+                                #   "timestamp-millis" maps xs:dateTime types to Avro "timestamp-millis" logical type annotating a "long".
+                                #   Note: Setting the stringTimestamp will override this config value to "string" for backward compatibility reasons. 
+    xsDate: "string"            # Configures the Avro mapping of xs:date XML types. [ string | date ].
+                                #   "string" (the default) maps xs:date types to Avro "string"
+                                #   "date" maps xs:date types to Avro "date" logical type annotating an "int".  
+    xsTime: "string"            # Configures the Avro mapping of xs:time XML types. [ string | time-micros | time-millis ]
+                                #   "string" (the default) maps xs:time types to Avro "string".
+                                #   "time-micros" maps xs:time types to Avro "time-micros" logical type annotating a "long". 
+                                #   "time-millis" maps xs:time types to Avro "time-millis" logical type annotating a "long".
 ```

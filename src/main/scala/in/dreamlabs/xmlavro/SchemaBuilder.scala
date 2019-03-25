@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.io.IOException
 
-import in.dreamlabs.xmlavro.config.XSDConfig
+import in.dreamlabs.xmlavro.config.{LogicalType, XSDConfig}
 import javax.xml.XMLConstants
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
@@ -35,6 +35,9 @@ final class SchemaBuilder(config: XSDConfig) {
   private val rootElementQName = config.rootElementQName
   private val xsdFile = config.xsdFile
   private val avscFile = config.avscFile
+  private val xsDateTimeMapping = config.logicalTypes.xsDateTime
+  private val xsDateMapping = config.logicalTypes.xsDate
+  private val xsTimeMapping = config.logicalTypes.xsTime
   private val schemas = mutable.Map[String, Schema]()
   private var typeCount = -1
   private var typeLevel = 0
@@ -116,7 +119,7 @@ final class SchemaBuilder(config: XSDConfig) {
                           array: Boolean): Schema = {
     typeLevel += 1
     var schema = eleType.getTypeCategory match {
-      case SIMPLE_TYPE => Schema.create(primaryType(eleType))
+      case SIMPLE_TYPE => primaryType(eleType)
       case COMPLEX_TYPE =>
         val name = complexTypeName(eleType)
         debug(s"Creating schema for type $name")
@@ -303,7 +306,7 @@ final class SchemaBuilder(config: XSDConfig) {
         if (eleType.getTypeCategory == SIMPLE_TYPE) {
           val tempType =
             eleType.asInstanceOf[XSSimpleTypeDefinition].getBuiltInKind
-          if (tempType == XSConstants.DATETIME_DT && !stringTimestamp)
+          if (tempType == XSConstants.DATETIME_DT && xsDateTimeMapping == LogicalType.LONG)
             field.addProp("comment", "timestamp")
         }
         field
@@ -372,12 +375,52 @@ final class SchemaBuilder(config: XSDConfig) {
     finalName
   }
 
-  private def primaryType(schemaType: XSTypeDefinition): Schema.Type = {
-    val avroType = SchemaBuilder.PRIMITIVES get schemaType
+  private def makeLogicalType(schemaType: Schema.Type, logicalType: String): Schema = {
+    val schema = Schema.create(schemaType)
+    schema.addProp("logicalType", logicalType)
+    schema
+  }
+
+  private def primaryType(schemaType: XSTypeDefinition): Schema = {
+
+    val xsType = schemaType
       .asInstanceOf[XSSimpleTypeDefinition]
       .getBuiltInKind
-    if (avroType isEmpty) Schema.Type.STRING
-    else avroType.get
+
+    val schema = xsType match {
+      // Mapping xs:dateTime to logical types
+      case XSConstants.DATETIME_DT => {
+        xsDateTimeMapping match {
+          case LogicalType.TIMESTAMP_MILLIS | LogicalType.TIMESTAMP_MICROS =>
+            makeLogicalType(Schema.Type.LONG, xsDateTimeMapping)
+          case LogicalType.LONG => Schema.create(Schema.Type.LONG)
+          case LogicalType.STRING => Schema.create(Schema.Type.STRING)
+          case _ => throw new ConversionException(s"Unsupported xs:dateTime logical type mapping: ${xsDateTimeMapping}");
+        }
+      }
+      // Mapping xs:time to logical types
+      case XSConstants.TIME_DT => {
+        xsTimeMapping match {
+          case LogicalType.TIME_MILLIS | LogicalType.TIME_MICROS =>
+            makeLogicalType(Schema.Type.LONG, xsTimeMapping)
+          case LogicalType.STRING => Schema.create(Schema.Type.STRING)
+          case _ => throw new ConversionException(s"Unsupported xs:time logical type mapping: ${xsTimeMapping}");
+        }
+      }
+      // Mapping xs:date to logical types
+      case XSConstants.DATE_DT => {
+        xsDateMapping match {
+          case LogicalType.DATE =>
+            makeLogicalType(Schema.Type.INT, xsDateMapping)
+          case LogicalType.STRING => Schema.create(Schema.Type.STRING)
+          case _ => throw new ConversionException(s"Unsupported xs:date logical type mapping: ${xsDateMapping}");
+        }
+      }
+      // Mapping other types to non-logical types with a fallback to string
+      case _ => Schema.create(SchemaBuilder.PRIMITIVES getOrElse(xsType, Schema.Type.STRING))
+    }
+
+    schema
   }
 
   private def debug(message: String): Unit =
