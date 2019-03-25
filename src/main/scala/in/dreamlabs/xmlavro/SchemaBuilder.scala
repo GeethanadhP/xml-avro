@@ -227,8 +227,13 @@ final class SchemaBuilder(config: XSDConfig) {
                                complexType: XSComplexTypeDefinition): mutable.Map[String, Field] = {
     val fields = mutable.LinkedHashMap[String, Field]()
     val particle = Option(complexType.getParticle)
-    if (particle isDefined)
-      fields ++= processGroup(particle.get.getTerm)
+    if (particle isDefined) {
+      val optional = particle.get.getMinOccurs == 0
+      val array = particle.get.getMaxOccurs > 1 || particle.get.getMaxOccursUnbounded
+      val innerTerm = particle.get.getTerm
+
+      fields ++= processGroup(innerTerm, optional, array)
+    }
     fields
   }
 
