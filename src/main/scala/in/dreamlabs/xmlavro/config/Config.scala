@@ -121,6 +121,7 @@ object LogicalType {
     * Dummy logical type for handling values as long without indicating a logicalType.
     */
   val LONG = "long"
+
 }
 
 class LogicalTypesConfig {
@@ -131,6 +132,8 @@ class LogicalTypesConfig {
   var xsTime: String = LogicalType.STRING
   @BeanProperty
   var xsDate: String = LogicalType.STRING
+  @BeanProperty
+  var xsDecimal: XSDecimalConfig = new XSDecimalConfig
 
   def validate(): Unit = {
     xsDateTime = Option(xsDateTime) getOrElse ""
@@ -158,6 +161,65 @@ class LogicalTypesConfig {
       case _ =>
         throw new IllegalArgumentException("Invalid configuration for xs:date logical type.")
     }
+
+    xsDecimal = Option(xsDecimal) getOrElse new XSDecimalConfig
+    xsDecimal.validate()
+  }
+
+}
+
+object XSDecimalConfigLogicalType {
+  val DOUBLE = "double"
+
+  val STRING = "string"
+
+  val DECIMAL = "decimal"
+}
+
+
+class XSDecimalConfig {
+  @BeanProperty
+  var avroType = XSDecimalConfigLogicalType.DOUBLE
+  @BeanProperty
+  var fallbackType = XSDecimalConfigLogicalType.STRING
+  @BeanProperty
+  var fallbackPrecision : Integer = null
+  @BeanProperty
+  var fallbackScale : Integer = 0
+
+  def validate(): Unit = {
+
+    val acceptedAvroTypes = List(
+      XSDecimalConfigLogicalType.DECIMAL,
+      XSDecimalConfigLogicalType.DOUBLE,
+      XSDecimalConfigLogicalType.STRING
+    )
+
+    if (!acceptedAvroTypes.contains(avroType)) {
+      throw new IllegalArgumentException(s"Invalid configuration value '$avroType' for xsDecimal avroType.")
+    }
+
+    if (!acceptedAvroTypes.contains(fallbackType)) {
+      throw new IllegalArgumentException(s"Invalid configuration value '$fallbackType' for xsDecimal fallbackType.")
+    }
+
+    if (fallbackType == XSDecimalConfigLogicalType.DECIMAL) {
+      if (Option(fallbackPrecision) isEmpty) {
+        throw new IllegalArgumentException(s"Missing xsDecimal fallbackPrecision " +
+          s"configuration for '$fallbackType' fallback type.")
+      }
+      if (Option(fallbackScale) isEmpty) {
+        throw new IllegalArgumentException(s"Missing xsDecimal fallbackScale " +
+          s"configuration for '$fallbackType' fallback type.")
+      }
+      if (fallbackPrecision <= 0) {
+        throw new IllegalArgumentException(s"Invalid configuration value $fallbackPrecision for xsDecimal fallbackPrecision.")
+      }
+      if (fallbackScale <= 0 || fallbackScale > fallbackPrecision) {
+        throw new IllegalArgumentException(s"Invalid configuration value $fallbackScale for xsDecimal fallbackScale.")
+      }
+    }
+
   }
 }
 

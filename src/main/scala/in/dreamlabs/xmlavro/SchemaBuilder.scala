@@ -2,7 +2,7 @@ package in.dreamlabs.xmlavro
 
 import java.io.IOException
 
-import in.dreamlabs.xmlavro.config.{LogicalType, XSDConfig}
+import in.dreamlabs.xmlavro.config.{LogicalType, XSDConfig, XSDecimalConfigLogicalType}
 import javax.xml.XMLConstants
 import org.apache.avro.Schema
 import org.apache.avro.Schema.Field
@@ -15,7 +15,7 @@ import org.apache.xerces.xs.XSConstants.{ATTRIBUTE_DECLARATION, ELEMENT_DECLARAT
 import org.apache.xerces.xs.XSTypeDefinition.{COMPLEX_TYPE, SIMPLE_TYPE}
 import org.apache.xerces.xs._
 import org.codehaus.jackson.JsonNode
-import org.codehaus.jackson.node.NullNode
+import org.codehaus.jackson.node.{IntNode, NullNode}
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.HashMap
@@ -38,6 +38,7 @@ final class SchemaBuilder(config: XSDConfig) {
   private val xsDateTimeMapping = config.logicalTypes.xsDateTime
   private val xsDateMapping = config.logicalTypes.xsDate
   private val xsTimeMapping = config.logicalTypes.xsTime
+  private val xsDecimalMapping = config.logicalTypes.xsDecimal
   private val schemas = mutable.Map[String, Schema]()
   private var typeCount = -1
   private var typeLevel = 0
@@ -388,11 +389,10 @@ final class SchemaBuilder(config: XSDConfig) {
 
   private def primaryType(schemaType: XSTypeDefinition): Schema = {
 
-    val xsType = schemaType
+    val simpleType = schemaType
       .asInstanceOf[XSSimpleTypeDefinition]
-      .getBuiltInKind
 
-    val schema = xsType match {
+    val schema = simpleType.getBuiltInKind match {
       // Mapping xs:dateTime to logical types
       case XSConstants.DATETIME_DT => {
         xsDateTimeMapping match {
@@ -421,11 +421,63 @@ final class SchemaBuilder(config: XSDConfig) {
           case _ => throw new ConversionException(s"Unsupported xs:date logical type mapping: ${xsDateMapping}");
         }
       }
+      // Mapping xs:decimal type restricted with totalDigits and fractionDigits facets to logical decimal type
+      case XSConstants.DECIMAL_DT => {
+        mapDecimal(simpleType)
+      }
       // Mapping other types to non-logical types with a fallback to string
-      case _ => Schema.create(SchemaBuilder.PRIMITIVES getOrElse(xsType, Schema.Type.STRING))
+      case otherType => Schema.create(SchemaBuilder.PRIMITIVES getOrElse(otherType, Schema.Type.STRING))
     }
 
     schema
+  }
+
+  private def mapDecimal(simpleType: XSSimpleTypeDefinition): Schema = {
+    val totalDigitsFacet = Option(simpleType.getFacet(XSSimpleTypeDefinition.FACET_TOTALDIGITS)
+      .asInstanceOf[XSFacet])
+
+    val factionDigitsFacet = Option(simpleType.getFacet(XSSimpleTypeDefinition.FACET_FRACTIONDIGITS)
+      .asInstanceOf[XSFacet])
+
+    val avroTypeMapping = if (xsDecimalMapping.avroType != XSDecimalConfigLogicalType.DECIMAL ||
+      totalDigitsFacet.isDefined && factionDigitsFacet.isDefined) {
+      xsDecimalMapping.avroType
+    } else {
+      xsDecimalMapping.fallbackType
+    }
+
+    avroTypeMapping match {
+      // xs:decimal to Avro double mapping or fallback to Avro double
+      case XSDecimalConfigLogicalType.DOUBLE => {
+        Schema.create(Schema.Type.DOUBLE)
+      }
+      // xs:decimal to Avro string mapping or fallback to Avro string
+      case XSDecimalConfigLogicalType.STRING => {
+        Schema.create(Schema.Type.STRING)
+      }
+      // xs:decimal to Avro decimal
+      case XSDecimalConfigLogicalType.DECIMAL => {
+
+        val precision = if (totalDigitsFacet isDefined) {
+          totalDigitsFacet.get.getIntFacetValue
+        } else {
+          xsDecimalMapping.fallbackPrecision.toInt
+        }
+
+        val scale = if (factionDigitsFacet isDefined) {
+          factionDigitsFacet.get.getIntFacetValue
+        } else {
+          xsDecimalMapping.fallbackScale.toInt
+        }
+
+        val decimalSchema = makeLogicalType(Schema.Type.BYTES, "decimal")
+        decimalSchema.addProp("precision", IntNode.valueOf(precision))
+        decimalSchema.addProp("scale", IntNode.valueOf(scale))
+        decimalSchema
+      }
+      case _ => throw new IllegalArgumentException("Illegal Avro type mapping for xs:decimal type declaration.")
+    }
+
   }
 
   private def debug(message: String): Unit =
@@ -468,7 +520,6 @@ object SchemaBuilder {
     XSConstants.UNSIGNEDINT_DT -> Schema.Type.LONG,
     XSConstants.FLOAT_DT -> Schema.Type.FLOAT,
     XSConstants.DOUBLE_DT -> Schema.Type.DOUBLE,
-    XSConstants.DECIMAL_DT -> Schema.Type.DOUBLE,
     XSConstants.DATETIME_DT -> Schema.Type.LONG,
     XSConstants.STRING_DT -> Schema.Type.STRING
   )

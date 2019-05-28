@@ -77,4 +77,30 @@ XSD:
                                 #   "string" (the default) maps xs:time types to Avro "string".
                                 #   "time-micros" maps xs:time types to Avro "time-micros" logical type annotating a "long". 
                                 #   "time-millis" maps xs:time types to Avro "time-millis" logical type annotating a "long".
+                                #
+    xsDecimal:                  # Configurations controlling the mapping of xs:decimal XML types
+                                #
+     avroType: "decimal"        #   Configures the Avro type mapping of xs:Decimal derived xml types.
+                                #   Possible values are: [ double | string | decimal ]
+                                #   - "double" (the default) maps xs:decimal types to Avro "double".
+                                #   - "string" maps xs:decimal types to Avro "string".
+                                #   - "decimal" maps xs:decimal types to Avro "decimal" logical types annotating "bytes".
+                                #   When using the "decimal" option, the mandatory precision and scale properties of the Avro
+                                #   decimal type are picked up from any xs:totalDigits and xs:fractionDigits restriction facets, if any.
+                                #   In the absense of these restriction facets, the mapping will instead fall back to using a backup strategy defined
+                                #   by a combination of the fallbackType, fallbackPrecision and fallbackScale configurations. 
+                                #     
+     fallbackType: "string"     # Configures a fallback type mapping for xs:decimal types with unrestricted precision and scale. (i.e. types without
+                                #   declared xs:totalDigits and xs:fractionDigits restriction facets). This configuration is ignored, unless the
+                                #   avroType setting is configured to "decimal".
+                                #   The possible values are: [ string | double | decimal ]
+                                #   All options are identical to those described under the avroType configuration, the only exception being 
+                                #   "decimal" that uses the fallbackPrecision and fallbackScale configurations as a defaults for missing
+                                #   precision and scale information.
+                                #   
+     fallbackPrecision: 5       #  Configures the fallback precision for decimal types without declared xs:totalDigits
+                                #    and restriction. Required when fallbackType is set to "decimal".
+                                #
+     fallbackScale: 3           #  Configures the fallback scale for decimal types without declared xs:fractionDigits restriction.
+                                #   Required when fallbackType is set to "decimal".
 ```
