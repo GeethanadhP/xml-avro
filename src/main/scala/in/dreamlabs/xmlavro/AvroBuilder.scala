@@ -19,6 +19,7 @@ import org.apache.avro.specific.SpecificDatumWriter
 import in.dreamlabs.xmlavro.Utils.info
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import org.apache.commons.io.input.CountingInputStream
 
 /**
   * Created by Royce on 25/01/2017.
@@ -102,18 +103,27 @@ class AvroBuilder(config: XMLConfig) {
   def createFromXML(xmlIn: InputStream,
                     sourceAvro: Option[GenericRecord] = None,
                     uniqueKey: Option[String] = None): Unit = {
-    val reader = XMLInputFactory.newInstance.createXMLEventReader(xmlIn)
+    val countingStream = new CountingInputStream(xmlIn)
+    val reader = XMLInputFactory.newInstance.createXMLEventReader(countingStream)
     var splitRecord: Record = null
     var splitFound, documentFound: Boolean = false
     var proceed: Boolean = false
     var parentEle: String = ""
     var currentDoc: Option[XMLDocument] = None
     var prevEvent: XMLEvent = null
+    var lastPrintMB: Long = 0
 
     while (reader.hasNext) {
       var event: XMLEvent = null
       try {
         event = reader.nextEvent
+        if (Utils.debugEnabled){
+          val currentMB = countingStream.getByteCount/1024/1024
+          if (currentMB > lastPrintMB){
+            Utils.debug(s"Processed ${currentMB} Mb")
+            lastPrintMB = currentMB
+          }
+        }
       } catch {
         case e: Exception =>
           currentDoc match {

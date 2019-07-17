@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'scala'
 
 group = 'in.dreamlabs'
-version = '1.8.0'
+version = '1.8.1'
 
 description = "A simple tool to convert xml to avro and their respective schemas"
 
@@ -19,6 +19,7 @@ dependencies {
     compile 'org.yaml:snakeyaml:1.17'
     compile 'org.apache.avro:avro:1.7.5'
     compile 'xerces:xercesImpl:2.11.0'
+    compile 'commons-io:commons-io:2.6'
     testCompile 'org.skyscreamer:jsonassert:1.2.3'
     testCompile 'junit:junit:4.8.1'
 }
