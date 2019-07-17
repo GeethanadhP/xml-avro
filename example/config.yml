@@ -4,6 +4,7 @@ XSD:
   xsdFile: "books.xsd"
   avscFile: "books.avsc"
   stringTimestamp: true
+  attributePrefix: "_"
 
 XML:
   xmlInput: "books.xml"

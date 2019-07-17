@@ -32,7 +32,7 @@
                 "type" : [ "null", "double" ],
                 "source" : "element text_value"
               }, {
-                "name" : "currency",
+                "name" : "_currency",
                 "type" : [ "null", "string" ],
                 "default" : null,
                 "source" : "attribute currency"
@@ -128,7 +128,7 @@
             "values" : "string"
           }
         }, {
-          "name" : "id",
+          "name" : "_id",
           "type" : [ "null", "string" ],
           "default" : null,
           "source" : "attribute id"
