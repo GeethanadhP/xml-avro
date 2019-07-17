@@ -57,11 +57,13 @@ class XSDConfig {
   var baseDir: Option[Path] = _
   var xsdFile: Path = _
   var avscFile: Path = _
+
   @BeanProperty var logicalTypes: LogicalTypesConfig = _
   @BeanProperty var rebuildChoice: Boolean = true
   @BeanProperty var stringTimestamp: Boolean = false
   @BeanProperty var ignoreHiveKeywords: Boolean = false
   @BeanProperty var rootElementQName: Option[QName] = None
+  @BeanProperty var attributePrefix: String = ""
 
   def getXsdFile: String = xsdFile.path
 

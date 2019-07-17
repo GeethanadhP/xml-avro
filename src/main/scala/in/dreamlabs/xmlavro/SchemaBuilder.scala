@@ -301,11 +301,17 @@ final class SchemaBuilder(config: XSDConfig) {
             (ele.asInstanceOf[XSAttributeDeclaration].getTypeDefinition, true)
         }
 
+        val fieldName =
+          if (attribute)
+            validName(config.attributePrefix + ele.getName).get
+          else
+            validName(ele.getName).get
+
         val fieldSchema: Schema = processType(eleType, optional, array)
         val defaultValue: JsonNode = if (optional) NullNode.getInstance() else null
 
         val field: Field =
-          new Field(validName(ele.getName).get, fieldSchema, null, defaultValue)
+          new Field(fieldName, fieldSchema, null, defaultValue)
 
         field.addProp(XNode.SOURCE, XNode(ele, attribute).source)
 
