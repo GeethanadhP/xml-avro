@@ -104,7 +104,7 @@ final class SchemaBuilder(config: XSDConfig) {
         }
         val record = Schema.createRecord(generateTypeName, null, null, false)
         record.setFields(fields.asJava)
-        record.addProp(XNode.SOURCE, XNode.DOCUMENT)
+        record.addProp(XNode.SOURCE, XNode.DOCUMENT: Any)
         record
       }
     }
@@ -389,7 +389,7 @@ final class SchemaBuilder(config: XSDConfig) {
 
   private def makeLogicalType(schemaType: Schema.Type, logicalType: String): Schema = {
     val schema = Schema.create(schemaType)
-    schema.addProp("logicalType", logicalType)
+    schema.addProp("logicalType", logicalType: Any)
     schema
   }
 
@@ -406,7 +406,7 @@ final class SchemaBuilder(config: XSDConfig) {
             makeLogicalType(Schema.Type.LONG, xsDateTimeMapping)
           case LogicalType.LONG => Schema.create(Schema.Type.LONG)
           case LogicalType.STRING => Schema.create(Schema.Type.STRING)
-          case _ => throw new ConversionException(s"Unsupported xs:dateTime logical type mapping: ${xsDateTimeMapping}");
+          case _ => throw new ConversionException(s"Unsupported xs:dateTime logical type mapping: $xsDateTimeMapping");
         }
       }
       // Mapping xs:time to logical types
