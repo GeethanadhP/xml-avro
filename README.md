@@ -106,3 +106,18 @@ XSD:
      fallbackScale: 3           #  Configures the fallback scale for decimal types without declared xs:fractionDigits restriction.
                                 #   Required when fallbackType is set to "decimal".
 ```
+
+## Docker
+
+### Build docker image
+
+
+```sh
+docker build -t xml-avro:v1.8.2 --build-arg VERSION=1.8.2 .
+```
+
+### Run with docker
+
+```sh
+docker run --rm -v $(pwd)/example:/app/example -v $(pwd)/example/config.yml:/app/config.yml xml-avro:latest
+```
