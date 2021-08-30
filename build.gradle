@@ -1,5 +1,4 @@
 apply plugin: 'java'
-apply plugin: 'maven'
 apply plugin: 'scala'
 
 group = 'in.dreamlabs'
@@ -14,14 +13,15 @@ repositories {
     maven { url "https://repo.maven.apache.org/maven2" } }
 
 dependencies {
-    compile 'org.scala-lang:scala-library:2.12.8'
-    compile 'org.scala-lang:scala-reflect:2.12.8'
-    compile 'org.yaml:snakeyaml:1.18'
-    compile 'org.apache.avro:avro:1.8.2'
-    compile 'xerces:xercesImpl:2.12.0'
-    compile 'commons-io:commons-io:2.6'
-    testCompile 'org.skyscreamer:jsonassert:1.2.3'
-    testCompile 'junit:junit:4.8.1'
+    implementation 'org.scala-lang:scala-library:2.12.8'
+    implementation 'org.scala-lang:scala-reflect:2.12.8'
+    implementation 'org.yaml:snakeyaml:1.18'
+    implementation 'org.apache.avro:avro:1.8.2'
+    implementation 'xerces:xercesImpl:2.12.0'
+    implementation 'commons-io:commons-io:2.6'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+    testImplementation 'org.skyscreamer:jsonassert:1.2.3'
+    testImplementation 'junit:junit:4.8.1'
 }
 
 task fatJar(type: Jar) {
@@ -31,13 +31,22 @@ task fatJar(type: Jar) {
                 'Main-Class': 'in.dreamlabs.xmlavro.Converter'
     }
     baseName = project.name + '-all'
-    from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it).matching {
+                exclude {
+                    it.path.contains('META-INF') ||
+                    it.path.contains('module-info.class')
+                }
+            }
+        }
+    }
     with jar
 }
 
 task copyLibs(type: Copy) {
     into buildDir.absolutePath + '/libs/libs'
-    from configurations.testRuntime
+    from configurations.runtimeClasspath
 }
 
 
