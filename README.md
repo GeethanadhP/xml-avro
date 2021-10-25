@@ -1,4 +1,6 @@
 # XSD => Avsc & XML => Avro
+No longer maintained actively
+
 ****
 This project was initially a fork of [xml-avro-elodina](https://github.com/elodina/xml-avro).
 Later evolved to separate project with lotsss of bug fixes, memory & performance improvements, options, re-coded in Scala
